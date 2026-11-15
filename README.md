@@ -10,29 +10,31 @@ Complete the backend setup first. Run the remaining commands from the folder con
 
 ### 2. Set up HTTPS
 
-Create the TLS directory:
+Point your domain to the server and allow TCP port 443 in the server firewall. Obtain a certificate from a trusted CA for the hostname in `PUBLIC_URL`. [Get a certificate with Certbot](https://certbot.eff.org/instructions)
 
 ```sh
 mkdir -p tls
 ```
 
-For remote access, place the full certificate chain in `tls/localhost.crt` and the private key in `tls/localhost.key`. The certificate must match the hostname in `PUBLIC_URL` and be trusted by browsers and nodes.
-
-For a local test, generate a self-signed certificate for `localhost` and make it trusted by your browser:
-
-```sh
-openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -keyout tls/localhost.key -out tls/localhost.crt
-```
+Place the full certificate chain in `tls/localhost.crt` and its private key in `tls/localhost.key`. Keep these filenames because the panel image reads them from the mounted TLS directory.
 
 ### 3. Start the panel
 
 ```sh
-docker compose up -d --pull always --wait frontend
+sudo docker compose up -d --pull always --wait frontend
 ```
 
 ### 4. Create the administrator
 
-Open the HTTPS address set in `PUBLIC_URL`. The default is `https://localhost:8443`. On a fresh database, choose a username and set or generate a password in the first-run form.
+Open the HTTPS address set in `PUBLIC_URL`. On a fresh database, choose a username and set or generate a password in the first-run form.
+
+### 5. Renew HTTPS
+
+After certificate renewal, replace both files and reload Nginx:
+
+```sh
+sudo docker compose exec -T frontend nginx -s reload
+```
 
 ## Русский
 
@@ -42,26 +44,28 @@ Open the HTTPS address set in `PUBLIC_URL`. The default is `https://localhost:84
 
 ### 2. Настрой HTTPS
 
-Создай каталог для TLS:
+Направь домен на сервер и разреши входящие подключения на TCP-порт 443. Выпусти сертификат у доверенного центра сертификации для домена из `PUBLIC_URL`. [Получение сертификата через Certbot](https://certbot.eff.org/instructions)
 
 ```sh
 mkdir -p tls
 ```
 
-Для удалённого доступа помести полную цепочку сертификатов в `tls/localhost.crt`, а приватный ключ — в `tls/localhost.key`. Сертификат должен подходить для имени в `PUBLIC_URL`, и ему должны доверять браузеры и ноды.
-
-Для локального теста сгенерируй самоподписанный сертификат для `localhost` и добавь его в доверенные для браузера:
-
-```sh
-openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -keyout tls/localhost.key -out tls/localhost.crt
-```
+Помести полную цепочку сертификатов в `tls/localhost.crt`, а приватный ключ — в `tls/localhost.key`. Сохрани эти имена, их использует образ панели.
 
 ### 3. Запусти панель
 
 ```sh
-docker compose up -d --pull always --wait frontend
+sudo docker compose up -d --pull always --wait frontend
 ```
 
 ### 4. Создай администратора
 
-Открой HTTPS-адрес из `PUBLIC_URL`. По умолчанию это `https://localhost:8443`. На чистой базе выбери логин и задай или сгенерируй пароль в форме первого запуска.
+Открой HTTPS-адрес из `PUBLIC_URL`. На чистой базе выбери логин и задай или сгенерируй пароль в форме первого запуска.
+
+### 5. Продлевай сертификат
+
+После продления сертификата замени оба файла и перечитай конфигурацию Nginx:
+
+```sh
+sudo docker compose exec -T frontend nginx -s reload
+```
