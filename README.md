@@ -1,10 +1,14 @@
 # dementia panel
 
-Веб-интерфейс работает с API на том же HTTPS-адресе. Для установки нужны Docker с Compose v2 и настроенный backend. Заполни `backend/.env` по [инструкции backend](../backend/README.md), включая `PUBLIC_URL`.
+Веб-интерфейс работает с API на том же HTTPS-адресе.
+
+## Установка из Docker Hub
+
+Для установки всей системы используй [готовый Compose из релиза backend](https://github.com/dementia-panel/backend/tree/v0.1.0#установка-из-docker-hub). Он запускает [образ панели `bor333/dementia-panel:0.1.0`](https://hub.docker.com/r/bor333/dementia-panel/tags) вместе с API, PostgreSQL и Valkey.
 
 ## Локальный запуск
 
-Начни из каталога panel, где лежат `Dockerfile` и `nginx.conf`. Для локального теста создай сертификат для `localhost` в родительском каталоге, за пределами контекста сборки Docker:
+Для запуска из исходников настрой `backend/.env` по [инструкции backend](https://github.com/dementia-panel/backend). Начни из каталога panel, где лежат `Dockerfile` и `nginx.conf`. Для локального теста создай сертификат для `localhost`.
 
 ```sh
 umask 077
@@ -13,6 +17,8 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
   -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' \
   -keyout ../.local/tls/localhost.key -out ../.local/tls/localhost.crt
 ```
+
+Если устанавливаешь из готовых образов, выполни этот блок в каталоге с загруженным `compose.yaml`, заменив `../.local/tls` на `./tls`.
 
 Выбери способ запуска в зависимости от того, как разложены исходники.
 
