@@ -29,11 +29,11 @@ mkdir -p tls
 ```
 
 ```sh
-sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/localhost.crt
+sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/dementia.crt
 ```
 
 ```sh
-sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/localhost.key
+sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/dementia.key
 ```
 
 ### 3. Start the panel
@@ -87,11 +87,11 @@ mkdir -p tls
 ```
 
 ```sh
-sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/localhost.crt
+sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/dementia.crt
 ```
 
 ```sh
-sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/localhost.key
+sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/dementia.key
 ```
 
 ### 3. Запусти панель
