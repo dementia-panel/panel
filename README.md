@@ -1,64 +1,67 @@
+<a href="#english"><kbd>English</kbd></a> <a href="#русский"><kbd>Русский</kbd></a>
+
 # dementia panel
 
-Веб-интерфейс работает с API на том же HTTPS-адресе.
+## English
 
-## Установка из Docker Hub
+### 1. Start the backend
 
-Для установки всей системы используй [готовый Compose из релиза backend](https://github.com/dementia-panel/backend/tree/v0.1.0#установка-из-docker-hub). Он запускает [образ панели `bor333/dementia-panel:0.1.0`](https://hub.docker.com/r/bor333/dementia-panel/tags) вместе с API, PostgreSQL и Valkey.
+Complete the backend setup first. Run the remaining commands from the folder containing the same `compose.yaml` and `.env`. [Backend installation](https://github.com/dementia-panel/backend#english)
 
-## Локальный запуск
+### 2. Set up HTTPS
 
-Для запуска из исходников настрой `backend/.env` по [инструкции backend](https://github.com/dementia-panel/backend). Начни из каталога panel, где лежат `Dockerfile` и `nginx.conf`. Для локального теста создай сертификат для `localhost`.
-
-```sh
-umask 077
-mkdir -p ../.local/tls
-openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
-  -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' \
-  -keyout ../.local/tls/localhost.key -out ../.local/tls/localhost.crt
-```
-
-Если устанавливаешь из готовых образов, выполни этот блок в каталоге с загруженным `compose.yaml`, заменив `../.local/tls` на `./tls`.
-
-Выбери способ запуска в зависимости от того, как разложены исходники.
-
-### Backend и panel в одном рабочем каталоге с общим Compose
-
-Перейди в корень проекта, где лежат `compose.yaml`, `backend/` и `panel/`. При первой настройке скопируй корневой `.env.example` в корневой `.env`. Укажи в нём те же `POSTGRES_USER`, `POSTGRES_PASSWORD` и `POSTGRES_DB`, что и в `backend/.env`. Если стек уже установлен, используй его существующий `.env` и имена Docker-томов. Общий Compose сам запустит backend.
+Create the TLS directory:
 
 ```sh
-docker compose up -d --build --wait
+mkdir -p tls
 ```
 
-### Backend и panel в отдельных репозиториях
+For remote access, place the full certificate chain in `tls/localhost.crt` and the private key in `tls/localhost.key`. The certificate must match the hostname in `PUBLIC_URL` and be trusted by browsers and nodes.
 
-Запусти backend его собственным Compose и выполни из каталога panel:
+For a local test, generate a self-signed certificate for `localhost` and make it trusted by your browser:
 
 ```sh
-docker build -t dementia/frontend:local .
-docker run -d --name dementia-frontend --restart unless-stopped \
-  --network dementia_panel -p 127.0.0.1:8443:443 \
-  -v "$PWD/../.local/tls:/etc/nginx/tls:ro" dementia/frontend:local
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -keyout tls/localhost.key -out tls/localhost.crt
 ```
 
-`dementia_panel` — имя сети при стандартном запуске backend. Если имя проекта Compose переопределено, используй фактическую сеть backend. В этой сети Nginx обращается к API через `backend:8080`.
-
-### Первый вход
-
-Открой `https://localhost:8443`. Если сменил порт панели, используй его и в адресе браузера, и в `PUBLIC_URL`. Для локального теста браузеру нужно доверять созданному сертификату. На чистой базе панель предложит создать администратора. Введи логин и пароль из 12 символов или больше либо сгенерируй пароль в интерфейсе.
-
-## Доступ с VPS и других устройств
-
-Укажи в `backend/.env` адрес, который смогут открыть и браузер, и нода, например `PUBLIC_URL='https://panel.example.com'`. На обратном прокси установи доверенный сертификат для этого имени и направь запросы на HTTPS-порт фронтенда, указав прокси доверенный сертификат фронтенда. Встроенный Nginx сам передаст `/api/`, `/s/`, `/healthz` и `/readyz` в backend. После изменения `PUBLIC_URL` повтори `docker compose up -d` в каталоге, из которого запущен backend.
-
-Проверь внешний адрес через `curl -fsS https://panel.example.com/readyz`. Локальная привязка порта к `127.0.0.1` в примерах рассчитана на запуск с обратным прокси на том же хосте либо на тест в браузере этого хоста.
-
-## Разработка
-
-В каталоге panel установи зависимости через `npm ci` (Node.js 22.12+). Скопируй `.env.example` в `.env` и укажи `BACKEND_URL` с локальным HTTP-адресом API, `BACKEND_PUBLIC_URL` со значением `PUBLIC_URL` backend, а также пути `../.local/tls/localhost.crt` и `../.local/tls/localhost.key` в `DEV_TLS_CERT` и `DEV_TLS_KEY`.
+### 3. Start the panel
 
 ```sh
-npm run dev
+docker compose up -d --pull always --wait frontend
 ```
 
-Открой HTTPS-адрес, который выведет Vite. Для сборки статических файлов выполни `npm run build`, результат появится в `dist/`.
+### 4. Create the administrator
+
+Open the HTTPS address set in `PUBLIC_URL`. The default is `https://localhost:8443`. On a fresh database, choose a username and set or generate a password in the first-run form.
+
+## Русский
+
+### 1. Запусти backend
+
+Сначала закончи настройку backend. Остальные команды выполни в папке с теми же `compose.yaml` и `.env`. [Установка backend](https://github.com/dementia-panel/backend#русский)
+
+### 2. Настрой HTTPS
+
+Создай каталог для TLS:
+
+```sh
+mkdir -p tls
+```
+
+Для удалённого доступа помести полную цепочку сертификатов в `tls/localhost.crt`, а приватный ключ — в `tls/localhost.key`. Сертификат должен подходить для имени в `PUBLIC_URL`, и ему должны доверять браузеры и ноды.
+
+Для локального теста сгенерируй самоподписанный сертификат для `localhost` и добавь его в доверенные для браузера:
+
+```sh
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' -keyout tls/localhost.key -out tls/localhost.crt
+```
+
+### 3. Запусти панель
+
+```sh
+docker compose up -d --pull always --wait frontend
+```
+
+### 4. Создай администратора
+
+Открой HTTPS-адрес из `PUBLIC_URL`. По умолчанию это `https://localhost:8443`. На чистой базе выбери логин и задай или сгенерируй пароль в форме первого запуска.
