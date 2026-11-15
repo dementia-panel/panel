@@ -8,15 +8,33 @@
 
 Complete the backend setup first. Run the remaining commands from the folder containing the same `compose.yaml` and `.env`. [Backend installation](https://github.com/dementia-panel/backend#english)
 
-### 2. Set up HTTPS
+### 2. Issue and install the HTTPS certificate
 
-Point your domain to the server and allow TCP port 443 in the server firewall. Obtain a certificate from a trusted CA for the hostname in `PUBLIC_URL`. [Get a certificate with Certbot](https://certbot.eff.org/instructions)
+Point your domain to the server. Allow inbound TCP traffic on port 80 for Let’s Encrypt validation and port 443 for the panel. Port 80 must be free when Certbot runs. Replace `panel.example.com` in the commands with the hostname from `PUBLIC_URL`. [Certbot standalone mode](https://eff-certbot.readthedocs.io/en/stable/using.html#standalone)
+
+Install Certbot on Ubuntu or Debian and request a certificate. Enter your email and follow Certbot's prompts.
+
+```sh
+sudo apt install certbot
+```
+
+```sh
+sudo certbot certonly --standalone --cert-name panel.example.com -d panel.example.com
+```
+
+Copy the certificate chain and private key into the directory mounted by Compose. Keep the destination filenames because the panel image expects them.
 
 ```sh
 mkdir -p tls
 ```
 
-Place the full certificate chain in `tls/localhost.crt` and its private key in `tls/localhost.key`. Keep these filenames because the panel image reads them from the mounted TLS directory.
+```sh
+sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/localhost.crt
+```
+
+```sh
+sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/localhost.key
+```
 
 ### 3. Start the panel
 
@@ -30,7 +48,13 @@ Open the HTTPS address set in `PUBLIC_URL`. On a fresh database, choose a userna
 
 ### 5. Renew HTTPS
 
-After certificate renewal, replace both files and reload Nginx:
+To request renewal when the certificate is due, run:
+
+```sh
+sudo certbot renew --cert-name panel.example.com
+```
+
+After renewal, repeat the two `install` commands from step 2 and reload Nginx. The panel uses the copies in `tls/`.
 
 ```sh
 sudo docker compose exec -T frontend nginx -s reload
@@ -42,15 +66,33 @@ sudo docker compose exec -T frontend nginx -s reload
 
 Сначала закончи настройку backend. Остальные команды выполни в папке с теми же `compose.yaml` и `.env`. [Установка backend](https://github.com/dementia-panel/backend#русский)
 
-### 2. Настрой HTTPS
+### 2. Выпусти и установи HTTPS-сертификат
 
-Направь домен на сервер и разреши входящие подключения на TCP-порт 443. Выпусти сертификат у доверенного центра сертификации для домена из `PUBLIC_URL`. [Получение сертификата через Certbot](https://certbot.eff.org/instructions)
+Направь домен на сервер. Разреши входящие TCP-подключения на порт 80 для проверки Let’s Encrypt и на порт 443 для панели. Порт 80 должен быть свободен во время работы Certbot. Замени `panel.example.com` в командах на домен из `PUBLIC_URL`. [Режим standalone в Certbot](https://eff-certbot.readthedocs.io/en/stable/using.html#standalone)
+
+Установи Certbot на Ubuntu или Debian и запроси сертификат. Введи email и следуй подсказкам Certbot.
+
+```sh
+sudo apt install certbot
+```
+
+```sh
+sudo certbot certonly --standalone --cert-name panel.example.com -d panel.example.com
+```
+
+Скопируй цепочку сертификатов и закрытый ключ в каталог, который подключает Compose. Сохрани имена файлов назначения, их использует образ панели.
 
 ```sh
 mkdir -p tls
 ```
 
-Помести полную цепочку сертификатов в `tls/localhost.crt`, а приватный ключ — в `tls/localhost.key`. Сохрани эти имена, их использует образ панели.
+```sh
+sudo install -m 0644 /etc/letsencrypt/live/panel.example.com/fullchain.pem tls/localhost.crt
+```
+
+```sh
+sudo install -m 0600 /etc/letsencrypt/live/panel.example.com/privkey.pem tls/localhost.key
+```
 
 ### 3. Запусти панель
 
@@ -64,7 +106,13 @@ sudo docker compose up -d --pull always --wait frontend
 
 ### 5. Продлевай сертификат
 
-После продления сертификата замени оба файла и перечитай конфигурацию Nginx:
+Когда подходит срок продления, выполни:
+
+```sh
+sudo certbot renew --cert-name panel.example.com
+```
+
+После продления повтори обе команды `install` из шага 2 и перечитай конфигурацию Nginx. Панель использует копии файлов из каталога `tls/`.
 
 ```sh
 sudo docker compose exec -T frontend nginx -s reload
