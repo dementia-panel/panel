@@ -1,6 +1,7 @@
 export interface User {
   id: string
   username: string
+  subscription_plan_id: string | null
   telegram_id: number | null
   enabled: boolean
   created_at: string
@@ -26,6 +27,7 @@ export interface Node {
   restarted_revision: number
   error: string | null
   retired_at: string | null
+  operation_stage?: string
   endpoint_host: string | null
   endpoint_port: number | null
 }
@@ -34,7 +36,8 @@ export interface Subscription {
   name: string
   user_id: string
   enabled: boolean
-  expires_at: string
+  expires_at: string | null
+  plan_id?: string
   node_ids: string[]
   traffic_limit_bytes: number | null
   traffic_used_bytes: number
@@ -69,4 +72,10 @@ export interface IntegrationStatus {
 export interface Integrations {
   telegram: IntegrationStatus
   webhook: IntegrationStatus
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  node_ids: string[]
 }

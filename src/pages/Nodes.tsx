@@ -20,11 +20,12 @@ import {
 
 export default function NodesPage() {
   const [params] = useSearchParams()
-  const r = useResource<Node[]>('/nodes', 10000)
+  const r = useResource<Node[]>('/nodes', 2500)
   const [search, setSearch] = useState('')
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'endpoint'; node?: Node } | null>(
-    params.has('create') ? { mode: 'create' } : null,
-  )
+  const [modal, setModal] = useState<{
+    mode: 'create' | 'edit' | 'endpoint' | 'remove'
+    node?: Node
+  } | null>(params.has('create') ? { mode: 'create' } : null)
   const [checking, setChecking] = useState<string | null>(null)
   const f = useFeedback()
   const nodes = (r.data || []).filter(
@@ -160,9 +161,12 @@ export default function NodesPage() {
                   </>
                 )}
               </dl>
+              {(n.status === 'installing' || n.operation_stage === 'removing') && (
+                <NodeOperation stage={n.operation_stage} />
+              )}
               {n.error && <div className="notice notice-error break-all">{n.error}</div>}
               <div className="node-actions">
-                {n.status === 'failed' && (
+                {n.status === 'failed' && n.operation_stage !== 'removing' && (
                   <Button onClick={() => setModal({ mode: 'create', node: n })}>
                     {t('Повторить установку')}
                   </Button>
@@ -193,7 +197,10 @@ export default function NodesPage() {
                   <Radio size={15} />
                   {t('Проверить')}
                 </Button>
-                <Button onClick={() => setModal({ mode: 'edit', node: n })}>
+                <Button
+                  disabled={n.operation_stage === 'removing'}
+                  onClick={() => setModal({ mode: 'edit', node: n })}
+                >
                   <Pencil size={15} />
                   {t('Настройки')}
                 </Button>
@@ -237,16 +244,8 @@ export default function NodesPage() {
                 </button>
                 <button
                   className="danger-text"
-                  onClick={() =>
-                    f.confirm(
-                      t('Удалить ') + n.name + '?',
-                      t('Нода будет выведена из эксплуатации. История трафика сохранится.'),
-                      async () => {
-                        await action(n, '', undefined, 'DELETE')
-                        f.notify(t('Нода выведена из эксплуатации'))
-                      },
-                    )
-                  }
+                  disabled={n.status === 'installing' || n.operation_stage === 'removing'}
+                  onClick={() => setModal({ mode: 'remove', node: n })}
                 >
                   <Trash2 size={13} />
                   {t('Удалить')}
@@ -261,15 +260,23 @@ export default function NodesPage() {
           title={
             modal.mode === 'create'
               ? t('Подключение сервера')
-              : modal.mode === 'endpoint'
-                ? t('Публичный адрес VPN')
-                : t('Настройки ноды')
+              : modal.mode === 'remove'
+                ? t('Удаление ноды с VPS')
+                : modal.mode === 'endpoint'
+                  ? t('Публичный адрес VPN')
+                  : t('Настройки ноды')
           }
           onClose={() => setModal(null)}
         >
           <ActionForm
             onCancel={() => setModal(null)}
-            submitLabel={modal.mode === 'create' ? t('Установить ноду') : t('Сохранить')}
+            submitLabel={
+              modal.mode === 'create'
+                ? t('Установить ноду')
+                : modal.mode === 'remove'
+                  ? t('Удалить ноду')
+                  : t('Сохранить')
+            }
             onSubmit={async (form) => {
               const value = (key: string) => String(form.get(key) || '').trim()
               if (modal.mode === 'create')
@@ -281,6 +288,16 @@ export default function NodesPage() {
                   ssh_port: Number(value('ssh_port')),
                   vpn_port: Number(value('vpn_port')),
                 })
+              else if (modal.mode === 'remove')
+                await action(
+                  modal.node!,
+                  '',
+                  {
+                    login: value('login'),
+                    password: String(form.get('password')),
+                  },
+                  'DELETE',
+                )
               else if (modal.mode === 'edit')
                 await action(modal.node!, '', { name: value('name') }, 'PATCH')
               else {
@@ -301,11 +318,27 @@ export default function NodesPage() {
               f.notify(
                 modal.mode === 'create'
                   ? t('Установка запущена. Состояние обновится автоматически.')
-                  : t('Изменения сохранены'),
+                  : modal.mode === 'remove'
+                    ? t('Очистка VPS запущена.')
+                    : t('Изменения сохранены'),
               )
             }}
           >
-            {modal.mode !== 'endpoint' ? (
+            {modal.mode === 'remove' ? (
+              <>
+                <p className="muted">
+                  {t(
+                    'Контейнеры ноды остановятся, установленные файлы и ключи будут удалены с VPS.',
+                  )}
+                </p>
+                <Field label={t('SSH-пользователь')}>
+                  <input name="login" defaultValue="root" required />
+                </Field>
+                <Field label={t('SSH-пароль')}>
+                  <input name="password" type="password" autoComplete="off" required />
+                </Field>
+              </>
+            ) : modal.mode !== 'endpoint' ? (
               <Field label={t('Название сервера')}>
                 <input
                   name="name"
@@ -392,5 +425,30 @@ export default function NodesPage() {
         </Modal>
       )}
     </>
+  )
+}
+
+function NodeOperation({ stage }: { stage?: string }) {
+  const steps = [
+    { id: 'queued', name: t('Ожидание установки'), progress: 5 },
+    { id: 'ssh', name: t('Подключение по SSH'), progress: 12 },
+    { id: 'download', name: t('Загрузка установщика'), progress: 25 },
+    { id: 'requirements', name: t('Проверка системы'), progress: 35 },
+    { id: 'docker', name: t('Подготовка Docker'), progress: 45 },
+    { id: 'build', name: t('Сборка AmneziaWG'), progress: 60 },
+    { id: 'start', name: t('Запуск контейнера'), progress: 80 },
+    { id: 'verify', name: t('Проверка VPN-интерфейса'), progress: 95 },
+  ]
+  const current = steps.find((step) => step.id === stage) || steps[0]
+  const label = stage === 'removing' ? t('Очистка VPS запущена.') : current.name
+  return (
+    <div className="node-operation" role="status">
+      <span>{label}</span>
+      <progress
+        aria-label={label}
+        max={100}
+        value={stage === 'removing' ? undefined : current.progress}
+      />
+    </div>
   )
 }

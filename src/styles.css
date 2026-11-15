@@ -2882,3 +2882,43 @@ select:focus {
   background: #ffffff09;
   border-color: #3a3a40;
 }
+
+.node-operation {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.node-operation progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border: 0;
+  border-radius: 99px;
+  overflow: hidden;
+  background: #292936;
+  color: #819afa;
+}
+
+.node-operation progress::-webkit-progress-bar {
+  background: #292936;
+}
+
+.node-operation progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: linear-gradient(90deg, #687ffc, #9cacf9);
+  transition: width 0.5s ease;
+}
+
+.node-operation progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: #819afa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node-operation progress::-webkit-progress-value {
+    transition: none;
+  }
+}

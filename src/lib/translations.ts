@@ -302,6 +302,32 @@ export const english: Record<string, string> = {
   'Скопируйте и передайте пользователю. Эта ссылка даёт доступ к конфигурациям VPN и показывается только сейчас.':
     'Copy this link and share it with the user. It grants access to VPN configurations and is only shown now.',
   'Профили подключения': 'Connection profiles',
+  'QR-код AmneziaVPN': 'AmneziaVPN QR code',
+  'QR-код AmneziaWG': 'AmneziaWG QR code',
+  'Скрыть QR-коды': 'Hide QR codes',
+  'Показать QR-коды': 'Show QR codes',
+  'Доступ пользователя': 'User access',
+  'Выпущенные профили и учёт трафика. Подписка назначается в настройках пользователя.':
+    'Issued profiles and traffic usage. Assign subscriptions in user settings.',
+  'Выберите подписку в настройках пользователя.': 'Select a subscription in user settings.',
+  'Создайте список серверов и назначьте его пользователям.':
+    'Create a server list and assign it to users.',
+  'Сначала снимите подписку со всех пользователей.':
+    'Unassign the subscription from all users first.',
+  'Без подписки': 'No subscription',
+  'Удаление ноды с VPS': 'Remove node from VPS',
+  'Удалить ноду': 'Remove node',
+  'Очистка VPS запущена.': 'VPS cleanup started.',
+  'Контейнеры ноды остановятся, установленные файлы и ключи будут удалены с VPS.':
+    'The node containers will stop and the installed files and keys will be removed from the VPS.',
+  'Ожидание установки': 'Waiting to install',
+  'Подключение по SSH': 'Connecting over SSH',
+  'Загрузка установщика': 'Downloading the installer',
+  'Проверка системы': 'Checking the system',
+  'Подготовка Docker': 'Preparing Docker',
+  'Сборка AmneziaWG': 'Building AmneziaWG',
+  'Запуск контейнера': 'Starting the container',
+  'Проверка VPN-интерфейса': 'Checking the VPN interface',
   Профили: 'Profiles',
   'Профиль начнёт работать после синхронизации ноды.':
     'The profile becomes usable after the node syncs.',

@@ -26,7 +26,8 @@ export default function Overview() {
   const activeNodes = nodes.data?.filter((n) => !n.retired_at) || []
   const online = activeNodes.filter((n) => n.online && n.enabled && n.status === 'ready').length
   const activeSubs =
-    subs.data?.filter((s) => s.enabled && new Date(s.expires_at) > new Date()) || []
+    subs.data?.filter((s) => s.enabled && (!s.expires_at || new Date(s.expires_at) > new Date())) ||
+    []
   const totals = (traffic.data || []).reduce(
     (s, t) => ({ rx: s.rx + t.received_bytes, tx: s.tx + t.sent_bytes }),
     { rx: 0, tx: 0 },

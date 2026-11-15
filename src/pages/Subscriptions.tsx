@@ -2,8 +2,8 @@ import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Settings2, Link2, Trash2, KeyRound } from 'lucide-react'
-import { api, bytes, date, errorMessage, localDate, useResource } from '../lib/api'
-import type { Subscription, User, Node } from '../lib/types'
+import { api, bytes, date, errorMessage, useResource } from '../lib/api'
+import type { Subscription, User, Node, SubscriptionPlan } from '../lib/types'
 import {
   ActionForm,
   Badge,
@@ -19,11 +19,11 @@ import {
   useFeedback,
 } from '../components/ui'
 
-type Mode = 'create' | 'edit' | 'nodes' | 'limit' | 'schedule'
+type Mode = 'edit' | 'limit' | 'schedule'
 type ProfileExport = { conf: string; key: string }
 type ProfileDialog = { subscriptionId: string; nodeIds: string[]; url?: string }
 
-function ProfileActions({
+export function ProfileActions({
   subscriptionId,
   nodeId,
   name,
@@ -35,9 +35,10 @@ function ProfileActions({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [manualKey, setManualKey] = useState('')
+  const [qr, setQR] = useState<{ vpn: string; awg: string } | null>(null)
   const feedback = useFeedback()
 
-  async function exportProfile(action: 'conf' | 'vpn' | 'copy') {
+  async function exportProfile(action: 'conf' | 'vpn' | 'copy' | 'qr') {
     setBusy(true)
     setError('')
     setManualKey('')
@@ -56,6 +57,11 @@ function ProfileActions({
         } catch {
           setManualKey((await profile).key)
         }
+      } else if (action === 'qr') {
+        const [{ conf, key }, { toDataURL }] = await Promise.all([profile, import('qrcode')])
+        const options = { width: 440, margin: 4, errorCorrectionLevel: 'M' as const }
+        const [vpn, awg] = await Promise.all([toDataURL(key, options), toDataURL(conf, options)])
+        setQR({ vpn, awg })
       } else {
         const { conf, key } = await profile
         const url = URL.createObjectURL(new Blob([action === 'conf' ? conf : key]))
@@ -87,7 +93,26 @@ function ProfileActions({
         <Button type="button" disabled={busy} onClick={() => void exportProfile('copy')}>
           {t('Скопировать vpn://')}
         </Button>
+        <Button
+          type="button"
+          disabled={busy}
+          onClick={() => (qr ? setQR(null) : void exportProfile('qr'))}
+        >
+          {qr ? t('Скрыть QR-коды') : t('Показать QR-коды')}
+        </Button>
       </div>
+      {qr && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <figure>
+            <figcaption>AmneziaVPN</figcaption>
+            <img src={qr.vpn} alt={t('QR-код AmneziaVPN')} />
+          </figure>
+          <figure>
+            <figcaption>AmneziaWG</figcaption>
+            <img src={qr.awg} alt={t('QR-код AmneziaWG')} />
+          </figure>
+        </div>
+      )}
       {manualKey && <CopyValue value={manualKey} inputLabel={t('Ключ vpn://')} />}
       {error && <ErrorNotice message={error} />}
     </div>
@@ -95,6 +120,15 @@ function ProfileActions({
 }
 
 export default function SubscriptionsPage() {
+  const [params] = useSearchParams()
+  return params.has('user') ? (
+    <IssuedAccessPage key={params.get('user')} />
+  ) : (
+    <SubscriptionPlansPage />
+  )
+}
+
+function IssuedAccessPage() {
   const r = useResource<Subscription[]>('/subscriptions', 15000)
   const users = useResource<User[]>('/users')
   const nodes = useResource<Node[]>('/nodes')
@@ -104,7 +138,6 @@ export default function SubscriptionsPage() {
   const [modal, setModal] = useState<{ mode: Mode; sub?: Subscription } | null>(null)
   const [profiles, setProfiles] = useState<ProfileDialog | null>(null)
   const f = useFeedback()
-  const available = (nodes.data || []).filter((n) => !n.retired_at)
   const list = (r.data || []).filter(
     (s) =>
       (!user || s.user_id === user) &&
@@ -137,14 +170,10 @@ export default function SubscriptionsPage() {
   return (
     <>
       <Heading
-        title={t('Подписки')}
-        description={t('Один доступ к нескольким серверам с лимитами и сроком действия.')}
-        action={
-          <Button variant="primary" onClick={() => setModal({ mode: 'create' })}>
-            <Plus size={16} />
-            {t('Создать подписку')}
-          </Button>
-        }
+        title={t('Доступ пользователя')}
+        description={t(
+          'Выпущенные профили и учёт трафика. Подписка назначается в настройках пользователя.',
+        )}
       />
       <section className="surface">
         <div className="toolbar">
@@ -174,10 +203,7 @@ export default function SubscriptionsPage() {
         ) : !list.length ? (
           <Empty
             title={t('Подписок пока нет')}
-            description={t('Создайте пользователя, подключите ноду и выпустите подписку.')}
-            action={
-              <Button onClick={() => setModal({ mode: 'create' })}>{t('Создать подписку')}</Button>
-            }
+            description={t('Выберите подписку в настройках пользователя.')}
           />
         ) : (
           <div className="table-wrap">
@@ -188,13 +214,14 @@ export default function SubscriptionsPage() {
                   <th>{t('Статус')}</th>
                   <th>{t('Ноды')}</th>
                   <th>{t('Трафик')}</th>
-                  <th>{t('Действует до')}</th>
                   <th>{t('Действия')}</th>
                 </tr>
               </thead>
               <tbody>
                 {list.map((s) => {
-                  const expired = new Date(s.expires_at).getTime() <= Date.now()
+                  const expired = Boolean(
+                    s.expires_at && new Date(s.expires_at).getTime() <= Date.now(),
+                  )
                   const limited =
                     s.traffic_limit_bytes !== null && s.traffic_used_bytes >= s.traffic_limit_bytes
                   return (
@@ -221,7 +248,7 @@ export default function SubscriptionsPage() {
                       <td>
                         <span
                           title={s.node_ids
-                            .map((id) => available.find((n) => n.id === id)?.name || id)
+                            .map((id) => nodes.data?.find((n) => n.id === id)?.name || id)
                             .join(', ')}
                         >
                           {s.node_ids.length}
@@ -249,7 +276,6 @@ export default function SubscriptionsPage() {
                           </div>
                         )}
                       </td>
-                      <td>{date(s.expires_at)}</td>
                       <td>
                         <div className="row-actions">
                           <Button
@@ -313,9 +339,7 @@ export default function SubscriptionsPage() {
         <Modal
           title={
             {
-              create: t('Новая подписка'),
               edit: t('Настройки подписки'),
-              nodes: t('Серверы подписки'),
               limit: t('Лимит трафика'),
               schedule: t('Автоматический сброс'),
             }[modal.mode]
@@ -327,28 +351,10 @@ export default function SubscriptionsPage() {
             onCancel={() => setModal(null)}
             onSubmit={async (form) => {
               const s = modal.sub
-              if (modal.mode === 'create') {
-                if (!form.getAll('node_ids').length)
-                  throw new Error(t('Выберите хотя бы одну ноду.'))
-                const nodeIds = form.getAll('node_ids').map(String)
-                const result = await api<{ id: string; url: string }>('/subscriptions', 'POST', {
-                  user_id: String(form.get('user_id')),
-                  name: String(form.get('name')).trim(),
-                  expires_at: new Date(String(form.get('expires_at'))).toISOString(),
-                  node_ids: nodeIds,
-                })
-                setProfiles({ subscriptionId: result.id, nodeIds, url: result.url })
-              }
               if (modal.mode === 'edit')
                 await mutation(s!, '', 'PATCH', {
                   enabled: form.get('enabled') === 'on',
-                  expires_at: new Date(String(form.get('expires_at'))).toISOString(),
                 })
-              if (modal.mode === 'nodes') {
-                if (!form.getAll('node_ids').length)
-                  throw new Error(t('Выберите хотя бы одну ноду.'))
-                await mutation(s!, '/nodes', 'PUT', { node_ids: form.getAll('node_ids') })
-              }
               if (modal.mode === 'limit') {
                 const value = String(form.get('limit'))
                 const amount = value ? Math.round(Number(value) * 1073741824) : null
@@ -365,76 +371,6 @@ export default function SubscriptionsPage() {
               f.notify(t('Подписка сохранена'))
             }}
           >
-            {modal.mode === 'create' && (
-              <>
-                <Field label={t('Название')}>
-                  <input
-                    name="name"
-                    required
-                    maxLength={128}
-                    placeholder={t('Например, Личная подписка')}
-                  />
-                </Field>
-                <Field label={t('Пользователь')}>
-                  <select name="user_id" required defaultValue={user}>
-                    <option value="" disabled>
-                      {t('Выберите пользователя')}
-                    </option>
-                    {users.data?.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.username}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </>
-            )}
-            {(modal.mode === 'create' || modal.mode === 'edit') && (
-              <Field
-                label={t('Действует до')}
-                hint={t('Время указано в часовом поясе вашего браузера.')}
-              >
-                <input
-                  name="expires_at"
-                  type="datetime-local"
-                  required
-                  defaultValue={localDate(
-                    modal.sub?.expires_at || new Date(Date.now() + 30 * 86400000).toISOString(),
-                  )}
-                />
-              </Field>
-            )}
-            {(modal.mode === 'nodes' || modal.mode === 'create') && (
-              <div className="field">
-                <span>{t('Серверы')}</span>
-                <div className="checkbox-list">
-                  {available.map((n) => (
-                    <label key={n.id}>
-                      <input
-                        name="node_ids"
-                        type="checkbox"
-                        value={n.id}
-                        defaultChecked={modal.sub?.node_ids.includes(n.id)}
-                      />
-                      <span>
-                        {n.name}
-                        <small>
-                          {n.ip} ·{' '}
-                          {n.enabled
-                            ? n.status === 'ready'
-                              ? t('Готова')
-                              : t('Не готова')
-                            : t('На паузе')}
-                        </small>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {!available.length && (
-                  <p className="muted">{t('Сначала добавьте ноду в разделе «Ноды».')}</p>
-                )}
-              </div>
-            )}
             {modal.mode === 'limit' && (
               <Field
                 label={t('Лимит, GiB')}
@@ -479,7 +415,6 @@ export default function SubscriptionsPage() {
                 </label>
                 <div className="settings-links">
                   {[
-                    ['nodes', t('Выбрать серверы')],
                     ['limit', t('Изменить лимит трафика')],
                     ['schedule', t('Автоматический сброс')],
                   ].map(([mode, label]) => (
@@ -555,6 +490,136 @@ export default function SubscriptionsPage() {
               {t('Готово')}
             </Button>
           </div>
+        </Modal>
+      )}
+    </>
+  )
+}
+
+function SubscriptionPlansPage() {
+  const plans = useResource<SubscriptionPlan[]>('/subscription-plans')
+  const nodes = useResource<Node[]>('/nodes')
+  const [editing, setEditing] = useState<SubscriptionPlan | 'new' | null>(null)
+  const feedback = useFeedback()
+  const activeNodes = (nodes.data || []).filter((node) => !node.retired_at)
+  const previous = editing === 'new' ? undefined : editing
+
+  return (
+    <>
+      <Heading
+        title={t('Подписки')}
+        description={t('Создайте список серверов и назначьте его пользователям.')}
+        action={
+          <Button variant="primary" onClick={() => setEditing('new')}>
+            <Plus size={16} />
+            {t('Создать подписку')}
+          </Button>
+        }
+      />
+      {plans.error && <ErrorNotice message={plans.error} retry={() => void plans.refresh()} />}
+      {plans.loading ? (
+        <Loading />
+      ) : (
+        <section className="surface">
+          {plans.data?.length ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('Подписка')}</th>
+                    <th>{t('Серверы')}</th>
+                    <th>{t('Действия')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plans.data.map((plan) => (
+                    <tr key={plan.id}>
+                      <td>
+                        <strong>{plan.name}</strong>
+                      </td>
+                      <td>
+                        {plan.node_ids
+                          .map((id) => activeNodes.find((node) => node.id === id)?.name || id)
+                          .join(', ') || '—'}
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <Button onClick={() => setEditing(plan)}>{t('Настройки')}</Button>
+                          <Button
+                            aria-label={t('Удалить ') + plan.name}
+                            onClick={() =>
+                              feedback.confirm(
+                                t('Удалить подписку?'),
+                                t('Сначала снимите подписку со всех пользователей.'),
+                                async () => {
+                                  await api('/subscription-plans/' + plan.id, 'DELETE')
+                                  await plans.refresh()
+                                },
+                              )
+                            }
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Empty
+              title={t('Подписок пока нет')}
+              description={t('Создайте список серверов и назначьте его пользователям.')}
+            />
+          )}
+        </section>
+      )}
+      {editing && (
+        <Modal
+          title={previous ? t('Настройки подписки') : t('Новая подписка')}
+          onClose={() => setEditing(null)}
+        >
+          <ActionForm
+            onCancel={() => setEditing(null)}
+            onSubmit={async (form) => {
+              const nodeIds = form.getAll('node_ids').map(String)
+              if (!nodeIds.length) throw new Error(t('Выберите хотя бы одну ноду.'))
+              await api(
+                '/subscription-plans' + (previous ? '/' + previous.id : ''),
+                previous ? 'PUT' : 'POST',
+                {
+                  name: String(form.get('name')).trim(),
+                  node_ids: nodeIds,
+                },
+              )
+              setEditing(null)
+              await plans.refresh()
+            }}
+          >
+            <Field label={t('Название')}>
+              <input name="name" required maxLength={128} defaultValue={previous?.name} />
+            </Field>
+            <div className="field">
+              <span>{t('Серверы')}</span>
+              <div className="checkbox-list">
+                {activeNodes.map((node) => (
+                  <label key={node.id}>
+                    <input
+                      type="checkbox"
+                      name="node_ids"
+                      value={node.id}
+                      defaultChecked={previous?.node_ids.includes(node.id)}
+                    />
+                    <span>{node.name}</span>
+                  </label>
+                ))}
+                {!activeNodes.length && (
+                  <p className="muted">{t('Сначала добавьте ноду в разделе «Ноды».')}</p>
+                )}
+              </div>
+            </div>
+          </ActionForm>
         </Modal>
       )}
     </>

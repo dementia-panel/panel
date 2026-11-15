@@ -7,12 +7,14 @@ import { useResource } from '../lib/api'
 let signedIn = true
 let calls: { path: string; method: string; body: Record<string, unknown> }[]
 let createdUsers: Record<string, unknown>[]
+let createdPlans: Record<string, unknown>[]
 let createdSubscriptions: Record<string, unknown>[]
 beforeEach(() => {
   signedIn = true
   calls = []
   createdUsers = []
   createdSubscriptions = []
+  createdPlans = []
   vi.stubGlobal('localStorage', {
     setItem: vi.fn(),
     getItem: vi.fn((key: string) => (key === 'dementia.language' ? 'ru' : null)),
@@ -76,11 +78,12 @@ beforeEach(() => {
             applied_revision: 1,
           },
         ])
-      if (path === '/api/admin/subscriptions' && method === 'POST') {
-        const subscription = { ...body, id: 'sub-1', enabled: true, traffic_used_bytes: 0 }
-        createdSubscriptions.push(subscription)
-        return respond({ ...subscription, url: 'https://example.test/s/test-only-link' }, 201)
+      if (path === '/api/admin/subscription-plans' && method === 'POST') {
+        const plan = { ...body, id: 'plan-1' }
+        createdPlans.push(plan)
+        return respond(plan, 201)
       }
+      if (path === '/api/admin/subscription-plans') return respond(createdPlans)
       if (path === '/api/admin/subscriptions') return respond(createdSubscriptions)
       if (path === '/api/admin/subscriptions/sub-1/nodes/node-1/profile')
         return respond({ conf: '[Interface]', key: 'vpn://existing-key' })
@@ -123,38 +126,50 @@ test('creates a user with a numeric Telegram ID and displays the saved record', 
     telegram_id: 12345678,
   })
 })
-test('creates a multi-server subscription and clears its one-time link on close', async () => {
-  createdUsers = [{ id: 'user-1', username: 'boris', enabled: true }]
+test('creates a subscription as a server list without a user or expiration', async () => {
   window.history.replaceState({}, '', '/subscriptions')
   const user = userEvent.setup()
   render(<App />)
   await screen.findByRole('heading', { name: 'Подписки' })
-  await user.click(screen.getAllByRole('button', { name: 'Создать подписку' })[0])
+  await user.click(screen.getByRole('button', { name: 'Создать подписку' }))
   await user.type(screen.getByLabelText('Название'), 'Личная')
-  await user.selectOptions(screen.getByLabelText('Пользователь'), 'user-1')
   await user.click(await screen.findByRole('checkbox', { name: /Frankfurt/ }))
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
-  await screen.findByText('Ссылка подписки готова')
-  const payload = calls.find((c) => c.method === 'POST' && c.path.endsWith('/subscriptions'))?.body
-  expect(payload?.node_ids).toEqual(['node-1'])
-  expect(payload?.user_id).toBe('user-1')
-  expect(Number.isNaN(Date.parse(String(payload?.expires_at)))).toBe(false)
+  await screen.findByText('Личная')
+  expect(
+    calls.find((c) => c.method === 'POST' && c.path.endsWith('/subscription-plans'))?.body,
+  ).toEqual({
+    name: 'Личная',
+    node_ids: ['node-1'],
+  })
+})
+
+test('opens already issued profiles and renders both QR codes without issuing new keys', async () => {
+  createdUsers = [{ id: 'user-1', username: 'boris', enabled: true }]
+  createdSubscriptions = [
+    { id: 'sub-1', user_id: 'user-1', name: 'Личная', enabled: true, node_ids: ['node-1'] },
+  ]
+  window.history.replaceState({}, '', '/subscriptions?user=user-1')
+  const user = userEvent.setup()
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: 'Профили подключения: Личная' }))
   expect(screen.getByRole('button', { name: 'Скачать .conf' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Скачать .vpn' })).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
   await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
-  await user.click(screen.getByRole('button', { name: 'Готово' }))
-  expect(screen.queryByDisplayValue('https://example.test/s/test-only-link')).toBeNull()
-  await navigator.clipboard.writeText('')
-  await user.click(await screen.findByRole('button', { name: 'Профили подключения: Личная' }))
-  await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
-  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
+  await user.click(screen.getByRole('button', { name: 'Показать QR-коды' }))
+  for (const name of ['QR-код AmneziaVPN', 'QR-код AmneziaWG']) {
+    expect((await screen.findByRole('img', { name })).getAttribute('src')).toMatch(
+      /^data:image\/png/,
+    )
+  }
   expect(calls.filter((c) => c.path.endsWith('/profile')).map((c) => c.method)).toEqual([
     'GET',
     'GET',
   ])
   expect(window.localStorage.setItem).not.toHaveBeenCalled()
 })
+
 test('reveals an API token once and clears it on close', async () => {
   window.history.replaceState({}, '', '/tokens')
   const user = userEvent.setup()

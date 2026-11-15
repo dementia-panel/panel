@@ -3,11 +3,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { api, date, useResource } from '../lib/api'
-import type { User } from '../lib/types'
+import { ProfileActions } from './Subscriptions'
+import type { User, SubscriptionPlan, Node } from '../lib/types'
 import {
   ActionForm,
   Badge,
   Button,
+  CopyValue,
   Empty,
   ErrorNotice,
   Field,
@@ -20,6 +22,9 @@ import {
 
 export default function UsersPage() {
   const resource = useResource<User[]>('/users', 15000)
+  const plans = useResource<SubscriptionPlan[]>('/subscription-plans')
+  const nodes = useResource<Node[]>('/nodes')
+  const [issued, setIssued] = useState<{ id: string; planId: string; url?: string } | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [edit, setEdit] = useState<User | 'new' | null>(null)
@@ -186,7 +191,7 @@ export default function UsersPage() {
                     <td>
                       <div className="row-actions">
                         <Link className="text-link" to={'/subscriptions?user=' + u.id}>
-                          {t('Подписки')}
+                          {t('Профили')}
                         </Link>
                         <Button
                           variant="ghost"
@@ -233,15 +238,41 @@ export default function UsersPage() {
               const telegram = raw ? Number(raw) : null
               if (telegram !== null && (!Number.isSafeInteger(telegram) || telegram <= 0))
                 throw new Error(t('Telegram ID должен быть положительным целым числом.'))
-              await api(
+              const selectedPlan = String(form.get('plan_id') || '') || null
+              const saved = await api<
+                { subscription_url?: string; access_id?: string } | undefined
+              >(
                 '/users' + (edit === 'new' ? '' : '/' + edit.id),
                 edit === 'new' ? 'POST' : 'PATCH',
                 {
                   username: String(form.get('username')).trim(),
                   telegram_id: telegram,
-                  ...(edit !== 'new' ? { enabled: form.get('enabled') === 'on' } : {}),
+                  ...(edit !== 'new'
+                    ? { enabled: form.get('enabled') === 'on' }
+                    : selectedPlan
+                      ? { plan_id: selectedPlan }
+                      : {}),
                 },
               )
+              if (saved?.access_id && selectedPlan)
+                setIssued({
+                  id: saved.access_id,
+                  planId: selectedPlan,
+                  url: saved.subscription_url,
+                })
+              if (edit !== 'new' && form.has('plan_id')) {
+                if (selectedPlan !== (edit.subscription_plan_id || null)) {
+                  const assigned = await api<{ id?: string; url?: string }>(
+                    '/users/' + edit.id + '/subscription',
+                    'PUT',
+                    {
+                      plan_id: selectedPlan,
+                    },
+                  )
+                  if (assigned.id && selectedPlan)
+                    setIssued({ id: assigned.id, planId: selectedPlan, url: assigned.url })
+                }
+              }
               setEdit(null)
               await resource.refresh()
               feedback.notify(
@@ -270,6 +301,23 @@ export default function UsersPage() {
                 placeholder="123456789"
               />
             </Field>
+            <Field label={t('Подписка')}>
+              <select
+                name="plan_id"
+                defaultValue={edit === 'new' ? '' : edit.subscription_plan_id || ''}
+                disabled={!plans.data}
+              >
+                <option value="">{t('Без подписки')}</option>
+                {(plans.data || []).map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {plans.error && (
+              <ErrorNotice message={plans.error} retry={() => void plans.refresh()} />
+            )}
             {edit !== 'new' && (
               <>
                 <label className="check-field">
@@ -285,6 +333,28 @@ export default function UsersPage() {
               </>
             )}
           </ActionForm>
+        </Modal>
+      )}
+      {issued && (
+        <Modal
+          title={issued.url ? t('Ссылка подписки готова') : t('Профили подключения')}
+          onClose={() => setIssued(null)}
+        >
+          <div className="modal-content grid gap-3">
+            {issued.url && <CopyValue value={issued.url} />}
+            <p className="muted">{t('Профиль начнёт работать после синхронизации ноды.')}</p>
+            {plans.data
+              ?.find((plan) => plan.id === issued.planId)
+              ?.node_ids.map((id) => (
+                <ProfileActions
+                  key={id}
+                  subscriptionId={issued.id}
+                  nodeId={id}
+                  name={nodes.data?.find((node) => node.id === id)?.name || id}
+                />
+              ))}
+            <Button onClick={() => setIssued(null)}>{t('Готово')}</Button>
+          </div>
         </Modal>
       )}
     </>

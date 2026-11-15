@@ -21,6 +21,7 @@ function messages(): Record<string, string> {
     'administrator is already configured': t('Администратор уже создан. Войдите с паролем.'),
     'resource already exists': t('Запись с такими данными уже существует.'),
     'resource not found': t('Запись не найдена. Обновите страницу.'),
+    'subscription plan is in use': t('Сначала снимите подписку со всех пользователей.'),
     'node already registered': t('Этот сервер уже зарегистрирован.'),
     'invalid node settings': t('Проверьте IP-адрес, порты и данные SSH-подключения.'),
     'too many login attempts': t('Слишком много попыток входа. Подождите минуту.'),
