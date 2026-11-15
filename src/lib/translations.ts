@@ -301,8 +301,8 @@ export const english: Record<string, string> = {
   'Ссылка подписки готова': 'Subscription link ready',
   'Скопируйте и передайте пользователю. Эта ссылка даёт доступ к конфигурациям VPN и показывается только сейчас.':
     'Copy this link and share it with the user. It grants access to VPN configurations and is only shown now.',
-  'Откройте ссылку для загрузки конфигурации или импорта в совместимое VPN-приложение.':
-    'Open the link to download a configuration or import it into a compatible VPN application.',
+  'Откройте ссылку в браузере, выберите сервер и скачайте профиль AmneziaVPN (.vpn) или AmneziaWG (.conf). В приложение импортируйте скачанный файл.':
+    'Open the link in a browser, choose a server, and download an AmneziaVPN (.vpn) or AmneziaWG (.conf) profile. Import the downloaded file into the app.',
   Готово: 'Done',
   'Именованные ключи для интеграций и внешних сервисов.':
     'Named keys for integrations and external services.',

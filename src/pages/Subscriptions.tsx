@@ -450,7 +450,7 @@ export default function SubscriptionsPage() {
             <CopyValue value={link} />
             <div className="notice">
               {t(
-                'Откройте ссылку для загрузки конфигурации или импорта в совместимое VPN-приложение.',
+                'Откройте ссылку в браузере, выберите сервер и скачайте профиль AmneziaVPN (.vpn) или AmneziaWG (.conf). В приложение импортируйте скачанный файл.',
               )}
             </div>
             <Button variant="primary" onClick={() => setLink('')}>
