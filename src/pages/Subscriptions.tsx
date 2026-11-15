@@ -1,8 +1,8 @@
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Settings2, Link2, Trash2 } from 'lucide-react'
-import { api, bytes, date, localDate, useResource } from '../lib/api'
+import { Plus, Settings2, Link2, Trash2, KeyRound } from 'lucide-react'
+import { api, bytes, date, errorMessage, localDate, useResource } from '../lib/api'
 import type { Subscription, User, Node } from '../lib/types'
 import {
   ActionForm,
@@ -20,6 +20,80 @@ import {
 } from '../components/ui'
 
 type Mode = 'create' | 'edit' | 'nodes' | 'limit' | 'schedule'
+type ProfileExport = { conf: string; key: string }
+type ProfileDialog = { subscriptionId: string; nodeIds: string[]; url?: string }
+
+function ProfileActions({
+  subscriptionId,
+  nodeId,
+  name,
+}: {
+  subscriptionId: string
+  nodeId: string
+  name: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [manualKey, setManualKey] = useState('')
+  const feedback = useFeedback()
+
+  async function exportProfile(action: 'conf' | 'vpn' | 'copy') {
+    setBusy(true)
+    setError('')
+    setManualKey('')
+    try {
+      const profile = api<ProfileExport>(`/subscriptions/${subscriptionId}/nodes/${nodeId}/profile`)
+      if (action === 'copy') {
+        try {
+          if (typeof ClipboardItem === 'function' && navigator.clipboard?.write) {
+            const content = profile.then(({ key }) => new Blob([key], { type: 'text/plain' }))
+            void content.catch(() => {})
+            await navigator.clipboard.write([new ClipboardItem({ 'text/plain': content })])
+          } else {
+            await navigator.clipboard.writeText((await profile).key)
+          }
+          feedback.notify(t('Ключ скопирован.'))
+        } catch {
+          setManualKey((await profile).key)
+        }
+      } else {
+        const { conf, key } = await profile
+        const url = URL.createObjectURL(new Blob([action === 'conf' ? conf : key]))
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `dementia-${nodeId}.${action}`
+        document.body.append(link)
+        link.click()
+        link.remove()
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+    } catch (error) {
+      setError(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="grid gap-2" role="group" aria-label={name}>
+      <strong>{name}</strong>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" disabled={busy} onClick={() => void exportProfile('conf')}>
+          {t('Скачать .conf')}
+        </Button>
+        <Button type="button" disabled={busy} onClick={() => void exportProfile('vpn')}>
+          {t('Скачать .vpn')}
+        </Button>
+        <Button type="button" disabled={busy} onClick={() => void exportProfile('copy')}>
+          {t('Скопировать vpn://')}
+        </Button>
+      </div>
+      {manualKey && <CopyValue value={manualKey} inputLabel={t('Ключ vpn://')} />}
+      {error && <ErrorNotice message={error} />}
+    </div>
+  )
+}
+
 export default function SubscriptionsPage() {
   const r = useResource<Subscription[]>('/subscriptions', 15000)
   const users = useResource<User[]>('/users')
@@ -28,7 +102,7 @@ export default function SubscriptionsPage() {
   const [search, setSearch] = useState('')
   const [user, setUser] = useState(params.get('user') || '')
   const [modal, setModal] = useState<{ mode: Mode; sub?: Subscription } | null>(null)
-  const [link, setLink] = useState('')
+  const [profiles, setProfiles] = useState<ProfileDialog | null>(null)
   const f = useFeedback()
   const available = (nodes.data || []).filter((n) => !n.retired_at)
   const list = (r.data || []).filter(
@@ -55,7 +129,7 @@ export default function SubscriptionsPage() {
           '/subscriptions/' + s.id + (revoke ? '/revoke' : '/rotate-link'),
           'POST',
         )
-        setLink(result.url)
+        setProfiles({ subscriptionId: s.id, nodeIds: s.node_ids || [], url: result.url })
         await r.refresh()
       },
     )
@@ -180,6 +254,17 @@ export default function SubscriptionsPage() {
                         <div className="row-actions">
                           <Button
                             variant="ghost"
+                            title={t('Профили подключения')}
+                            aria-label={t('Профили подключения') + ': ' + s.name}
+                            onClick={() =>
+                              setProfiles({ subscriptionId: s.id, nodeIds: s.node_ids || [] })
+                            }
+                          >
+                            <KeyRound size={16} />
+                            {t('Профили')}
+                          </Button>
+                          <Button
+                            variant="ghost"
                             aria-label={t('Новая ссылка ') + s.name}
                             onClick={() => rotate(s, false)}
                           >
@@ -245,13 +330,14 @@ export default function SubscriptionsPage() {
               if (modal.mode === 'create') {
                 if (!form.getAll('node_ids').length)
                   throw new Error(t('Выберите хотя бы одну ноду.'))
-                const result = await api<{ url: string }>('/subscriptions', 'POST', {
+                const nodeIds = form.getAll('node_ids').map(String)
+                const result = await api<{ id: string; url: string }>('/subscriptions', 'POST', {
                   user_id: String(form.get('user_id')),
                   name: String(form.get('name')).trim(),
                   expires_at: new Date(String(form.get('expires_at'))).toISOString(),
-                  node_ids: form.getAll('node_ids'),
+                  node_ids: nodeIds,
                 })
-                setLink(result.url)
+                setProfiles({ subscriptionId: result.id, nodeIds, url: result.url })
               }
               if (modal.mode === 'edit')
                 await mutation(s!, '', 'PATCH', {
@@ -439,21 +525,33 @@ export default function SubscriptionsPage() {
           </ActionForm>
         </Modal>
       )}
-      {link && (
-        <Modal title={t('Ссылка подписки готова')} onClose={() => setLink('')}>
+      {profiles && (
+        <Modal
+          title={profiles.url ? t('Ссылка подписки готова') : t('Профили подключения')}
+          onClose={() => setProfiles(null)}
+        >
           <div className="modal-content">
-            <p className="muted">
-              {t(
-                'Скопируйте и передайте пользователю. Эта ссылка даёт доступ к конфигурациям VPN и показывается только сейчас.',
-              )}
-            </p>
-            <CopyValue value={link} />
-            <div className="notice">
-              {t(
-                'Откройте ссылку в браузере, выберите сервер и скачайте профиль AmneziaVPN (.vpn) или AmneziaWG (.conf). В приложение импортируйте скачанный файл.',
-              )}
-            </div>
-            <Button variant="primary" onClick={() => setLink('')}>
+            {profiles.url && (
+              <>
+                <p className="muted">
+                  {t(
+                    'Скопируйте и передайте пользователю. Эта ссылка даёт доступ к конфигурациям VPN и показывается только сейчас.',
+                  )}
+                </p>
+                <CopyValue value={profiles.url} />
+              </>
+            )}
+            <p className="muted">{t('Профиль начнёт работать после синхронизации ноды.')}</p>
+            {!profiles.nodeIds.length && <p>{t('В подписке пока нет серверов.')}</p>}
+            {profiles.nodeIds.map((nodeId) => (
+              <ProfileActions
+                key={nodeId}
+                subscriptionId={profiles.subscriptionId}
+                nodeId={nodeId}
+                name={nodes.data?.find((node) => node.id === nodeId)?.name || nodeId}
+              />
+            ))}
+            <Button variant="primary" onClick={() => setProfiles(null)}>
               {t('Готово')}
             </Button>
           </div>

@@ -7,10 +7,12 @@ import { useResource } from '../lib/api'
 let signedIn = true
 let calls: { path: string; method: string; body: Record<string, unknown> }[]
 let createdUsers: Record<string, unknown>[]
+let createdSubscriptions: Record<string, unknown>[]
 beforeEach(() => {
   signedIn = true
   calls = []
   createdUsers = []
+  createdSubscriptions = []
   vi.stubGlobal('localStorage', {
     setItem: vi.fn(),
     getItem: vi.fn((key: string) => (key === 'dementia.language' ? 'ru' : null)),
@@ -74,9 +76,14 @@ beforeEach(() => {
             applied_revision: 1,
           },
         ])
-      if (path === '/api/admin/subscriptions' && method === 'POST')
-        return respond({ ...body, url: 'https://example.test/s/test-only-link' }, 201)
-      if (path === '/api/admin/subscriptions') return respond([])
+      if (path === '/api/admin/subscriptions' && method === 'POST') {
+        const subscription = { ...body, id: 'sub-1', enabled: true, traffic_used_bytes: 0 }
+        createdSubscriptions.push(subscription)
+        return respond({ ...subscription, url: 'https://example.test/s/test-only-link' }, 201)
+      }
+      if (path === '/api/admin/subscriptions') return respond(createdSubscriptions)
+      if (path === '/api/admin/subscriptions/sub-1/nodes/node-1/profile')
+        return respond({ conf: '[Interface]', key: 'vpn://existing-key' })
       if (path === '/api/admin/api-tokens' && method === 'POST')
         return respond({ token: 'test-only-api-key' }, 201)
       if (path === '/api/admin/api-tokens') return respond([])
@@ -132,8 +139,20 @@ test('creates a multi-server subscription and clears its one-time link on close'
   expect(payload?.node_ids).toEqual(['node-1'])
   expect(payload?.user_id).toBe('user-1')
   expect(Number.isNaN(Date.parse(String(payload?.expires_at)))).toBe(false)
+  expect(screen.getByRole('button', { name: 'Скачать .conf' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Скачать .vpn' })).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
+  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
   await user.click(screen.getByRole('button', { name: 'Готово' }))
   expect(screen.queryByDisplayValue('https://example.test/s/test-only-link')).toBeNull()
+  await navigator.clipboard.writeText('')
+  await user.click(await screen.findByRole('button', { name: 'Профили подключения: Личная' }))
+  await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
+  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
+  expect(calls.filter((c) => c.path.endsWith('/profile')).map((c) => c.method)).toEqual([
+    'GET',
+    'GET',
+  ])
   expect(window.localStorage.setItem).not.toHaveBeenCalled()
 })
 test('reveals an API token once and clears it on close', async () => {
