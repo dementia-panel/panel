@@ -1,57 +1,62 @@
 import { useState } from 'react'
-import { ExternalLink, Link2 } from 'lucide-react'
-import { api, useResource } from '../lib/api'
+import { useResource } from '../lib/api'
 import { t } from '../lib/i18n'
-import type { Node, Subscription } from '../lib/types'
+import type { Node, Subscription, UserDevice } from '../lib/types'
 import { ProfileActions } from '../pages/Subscriptions'
-import { Button, CopyValue, ErrorNotice, Loading, useFeedback } from './ui'
+import { Select } from './Select'
+import { DeviceLink } from './UserDevices'
+import { ErrorNotice, Loading } from './ui'
 
 export function UserConnectionAccess({ access }: { access: Subscription }) {
-  const link = useResource<{ url: string | null }>(`/subscriptions/${access.id}/link`)
+  const devices = useResource<UserDevice[]>(`/users/${access.user_id}/devices`, 15000)
   const nodes = useResource<Node[]>('/nodes')
-  const [issuedURL, setIssuedURL] = useState('')
-  const feedback = useFeedback()
-  const url = issuedURL || link.data?.url
-
-  function replaceLink() {
-    feedback.confirm(
-      t('Создать новую ссылку?'),
-      t('Старая ссылка перестанет работать. Уже импортированные VPN-ключи сохранят доступ.'),
-      async () => {
-        const result = await api<{ url: string }>(`/subscriptions/${access.id}/rotate-link`, 'POST')
-        setIssuedURL(result.url)
-      },
-    )
-  }
-
+  const [selected, setSelected] = useState('')
+  const device = devices.data?.find((item) => item.id === selected) ?? devices.data?.[0]
   return (
     <section className="user-connection-access" aria-label={t('Профили подключения')}>
       <div className="user-connection-heading">
         <h3>{t('Профили подключения')}</h3>
         <span className="muted">{t('Уже выданные ключи')}</span>
       </div>
-      {link.loading ? <Loading /> : link.error ? (
-        <ErrorNotice message={link.error} retry={() => void link.refresh()} />
-      ) : url ? (
-        <div className="user-connection-link">
-          <CopyValue value={url} inputLabel={t('Ссылка подписки')} />
-          <a className="btn btn-secondary" href={url} target="_blank" rel="noreferrer">
-            <ExternalLink size={15} />{t('Открыть')}
-          </a>
-        </div>
+      {devices.loading ? (
+        <Loading />
+      ) : devices.error ? (
+        <ErrorNotice message={devices.error} retry={() => void devices.refresh()} />
+      ) : device ? (
+        <>
+          <Select
+            ariaLabel={t('Устройство для подключения')}
+            value={device.id}
+            onChange={setSelected}
+            options={(devices.data ?? []).map((item) => ({
+              value: item.id,
+              label: item.name === 'Main device' ? t('Основное устройство') : item.name,
+            }))}
+          />
+          <DeviceLink
+            key={device.id}
+            userID={access.user_id}
+            deviceID={device.id}
+            subscriptionID={access.id}
+          />
+          {nodes.error ? (
+            <ErrorNotice message={nodes.error} retry={() => void nodes.refresh()} />
+          ) : (
+            (access.node_ids ?? []).map((nodeId) => (
+              <div className="user-connection-server" key={device.id + nodeId}>
+                <ProfileActions
+                  subscriptionId={access.id}
+                  nodeId={nodeId}
+                  endpoint={`/users/${access.user_id}/devices/${device.id}/nodes/${nodeId}/profile`}
+                  name={nodes.data?.find((node) => node.id === nodeId)?.name ?? t('Сервер')}
+                />
+              </div>
+            ))
+          )}
+        </>
       ) : (
-        <p className="muted">{t('Ссылка выпущена до обновления и не сохранена. Можно создать новую ссылку без замены VPN-ключей.')}</p>
+        <p className="muted">{t('Устройства ещё не добавлены.')}</p>
       )}
-      {!link.loading && !link.error && (
-        <Button type="button" onClick={replaceLink}><Link2 size={15} />{t('Создать новую ссылку')}</Button>
-      )}
-      {nodes.error ? <ErrorNotice message={nodes.error} retry={() => void nodes.refresh()} /> :
-        (access.node_ids ?? []).map((nodeId) => (
-          <div className="user-connection-server" key={nodeId}>
-            <ProfileActions subscriptionId={access.id} nodeId={nodeId}
-              name={nodes.data?.find((node) => node.id === nodeId)?.name ?? t('Сервер')} />
-          </div>
-        ))}
     </section>
   )
 }

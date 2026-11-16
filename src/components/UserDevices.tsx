@@ -4,7 +4,33 @@ import { api, date, errorMessage, useResource } from '../lib/api'
 import { t } from '../lib/i18n'
 import type { Node, Subscription, User, UserDevice } from '../lib/types'
 import { ProfileActions } from '../pages/Subscriptions'
-import { Badge, Button, ErrorNotice, Field, Loading, useFeedback } from './ui'
+import { Badge, Button, ErrorNotice, Field, Loading, CopyValue, useFeedback } from './ui'
+
+export function DeviceLink({
+  userID,
+  deviceID,
+  subscriptionID,
+}: {
+  userID: string
+  deviceID: string
+  subscriptionID: string
+}) {
+  const link = useResource<{ url: string }>(
+    `/users/${userID}/devices/${deviceID}/link?subscription_id=${subscriptionID}`,
+  )
+  return (
+    <div className="device-subscription-link">
+      <span className="settings-field-label">{t('Ссылка подписки устройства')}</span>
+      {link.error ? (
+        <ErrorNotice message={link.error} retry={() => void link.refresh()} />
+      ) : link.data ? (
+        <CopyValue value={link.data.url} inputLabel={t('Ссылка подписки устройства')} />
+      ) : (
+        <Loading />
+      )}
+    </div>
+  )
+}
 
 export function UserDevices({
   user,
@@ -207,6 +233,9 @@ export function UserDevices({
                   {t('Отмена')}
                 </Button>
               </form>
+            )}
+            {access && (
+              <DeviceLink userID={user.id} deviceID={device.id} subscriptionID={access.id} />
             )}
             {access && (
               <Button

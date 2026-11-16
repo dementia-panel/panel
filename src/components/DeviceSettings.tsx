@@ -50,7 +50,7 @@ function SettingsForm({
 export function DeviceSettings() {
   const settings = useResource<{ default_device_limit: number | null }>('/settings/devices')
   return (
-    <section className="surface padded mt-6 device-settings">
+    <section className="surface padded device-settings">
       <h2>{t('Устройства пользователей')}</h2>
       <p className="muted">
         {t(

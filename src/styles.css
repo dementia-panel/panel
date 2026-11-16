@@ -1031,7 +1031,6 @@ input[type='checkbox'] {
 }
 .padded {
   padding: 24px;
-  margin: 0;
 }
 .padded p {
   font-size: 12px;
@@ -2763,9 +2762,6 @@ summary:focus-visible {
 }
 input[type='checkbox']:focus-visible {
   filter: brightness(1.5);
-}
-.settings-address + .settings-language {
-  margin-top: 24px;
 }
 .custom-select {
   position: relative;

@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { applicationDownloadURL } from '../pages/PublicSubscription'
 import { TrafficTrend } from '../components/TrafficTrend'
 import { App } from '../App'
 import { useResource } from '../lib/api'
@@ -82,6 +83,8 @@ beforeEach(() => {
           createdDevices = createdDevices.filter((device) => device.id !== id)
         return respond(undefined, 204)
       }
+      if (/^\/api\/admin\/users\/user-1\/devices\/[^/]+\/link\?subscription_id=/.test(path))
+        return respond({ url: 'https://example.test/s/device-' + path.split('/')[6] })
       if (path === '/api/admin/settings/subscription-branding')
         return respond(method === 'PUT' ? body : { name: 'dementia', logo: '' })
       if (path === '/api/admin/settings/integrations')
@@ -513,6 +516,7 @@ test('opens a subscription and reveals its key without an admin session', async 
 })
 
 test('opens the user card, saves subscription expiration and can pause access', async () => {
+  createdDevices = [{ id: 'phone', user_id: 'user-1', name: 'iPhone', online: true }]
   const user = userEvent.setup()
   createdUsers = [
     {
@@ -545,14 +549,12 @@ test('opens the user card, saves subscription expiration and can pause access', 
   await user.click(await screen.findByRole('button', { name: 'Открыть пользователя boris' }))
   await screen.findByRole('heading', { name: 'Карточка пользователя' })
   await screen.findByRole('switch', { name: 'Подписка включена' })
-  await screen.findByDisplayValue('https://example.test/s/existing-subscription')
+  await screen.findByDisplayValue('https://example.test/s/device-phone')
   expect(screen.getByRole('button', { name: 'Скачать .conf' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Скачать .vpn' })).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Скопировать' }))
   await waitFor(async () =>
-    expect(await navigator.clipboard.readText()).toBe(
-      'https://example.test/s/existing-subscription',
-    ),
+    expect(await navigator.clipboard.readText()).toBe('https://example.test/s/device-phone'),
   )
   await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
   await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
@@ -698,7 +700,7 @@ test('switches subscription devices without keeping another device key visible',
         return Response.json({
           name: 'Device subscription',
           devices: [
-            { id: 'phone', name: 'iPhone' },
+            { id: 'phone', name: 'iPhone', online: true },
             { id: 'laptop', name: 'Laptop' },
           ],
           locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
@@ -712,6 +714,7 @@ test('switches subscription devices without keeping another device key visible',
   window.history.replaceState({}, '', path)
   render(<App />)
   await screen.findByRole('heading', { name: 'Device subscription' })
+  expect(screen.getByText('По этому ключу уже подключено устройство.')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
   expect(
     (await screen.findByRole<HTMLTextAreaElement>('textbox', { name: 'Ключ vpn://' })).value,
@@ -729,4 +732,21 @@ test('switches subscription devices without keeping another device key visible',
   expect(
     (screen.getByRole('textbox', { name: 'Ссылка на подписку' }) as HTMLInputElement).value,
   ).toContain('?device_id=laptop')
+})
+
+test('opens the selected app directly in the mobile platform store', () => {
+  expect(applicationDownloadURL('vpn', 'iPhone', 1)).toBe(
+    'https://apps.apple.com/app/amneziavpn/id1600529900',
+  )
+  expect(applicationDownloadURL('wg', 'iPad', 5)).toBe(
+    'https://apps.apple.com/app/amneziawg/id6478942365',
+  )
+  expect(applicationDownloadURL('vpn', 'Macintosh', 5)).toContain('apps.apple.com')
+  expect(applicationDownloadURL('vpn', 'Android', 1)).toBe(
+    'https://play.google.com/store/apps/details?id=org.amnezia.vpn',
+  )
+  expect(applicationDownloadURL('wg', 'Android', 1)).toBe(
+    'https://play.google.com/store/apps/details?id=org.amnezia.awg',
+  )
+  expect(applicationDownloadURL('vpn', 'Windows', 0)).toBe('https://amnezia.org/downloads')
 })

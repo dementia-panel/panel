@@ -32,69 +32,71 @@ export default function TokensPage() {
           </Button>
         }
       />
-      <div className="notice mb-6">
-        <KeyRound size={18} />
-        <span>
-          {t(
-            'Токены не имеют срока действия. Передавайте ключ в заголовке Authorization: Bearer. Удаление немедленно отзывает доступ.',
-          )}
-        </span>
-      </div>
-      <section className="surface">
-        {r.error && <ErrorNotice message={r.error} retry={() => void r.refresh()} />}
-        {r.loading ? (
-          <Loading />
-        ) : !r.data?.length ? (
-          <Empty
-            title={t('Нет API-токенов')}
-            description={t('Выпустите отдельный ключ для каждой интеграции.')}
-            action={<Button onClick={() => setCreate(true)}>{t('Выпустить токен')}</Button>}
-          />
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('Название')}</th>
-                  <th>{t('Создан')}</th>
-                  <th>{t('Идентификатор')}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {r.data.map((token) => (
-                  <tr key={token.id}>
-                    <td>
-                      <strong>{token.name}</strong>
-                    </td>
-                    <td>{date(token.created_at)}</td>
-                    <td className="mono muted">{token.id}</td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        aria-label={t('Удалить ') + token.name}
-                        onClick={() =>
-                          f.confirm(
-                            t('Удалить токен ') + token.name + '?',
-                            t('Сервисы, использующие этот ключ, потеряют доступ к API.'),
-                            async () => {
-                              await api('/api-tokens/' + token.id, 'DELETE')
-                              await r.refresh()
-                              f.notify(t('Токен отозван'))
-                            },
-                          )
-                        }
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </td>
+      <div className="page-sections">
+        <div className="notice">
+          <KeyRound size={18} />
+          <span>
+            {t(
+              'Токены не имеют срока действия. Передавайте ключ в заголовке Authorization: Bearer. Удаление немедленно отзывает доступ.',
+            )}
+          </span>
+        </div>
+        <section className="surface">
+          {r.error && <ErrorNotice message={r.error} retry={() => void r.refresh()} />}
+          {r.loading ? (
+            <Loading />
+          ) : !r.data?.length ? (
+            <Empty
+              title={t('Нет API-токенов')}
+              description={t('Выпустите отдельный ключ для каждой интеграции.')}
+              action={<Button onClick={() => setCreate(true)}>{t('Выпустить токен')}</Button>}
+            />
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('Название')}</th>
+                    <th>{t('Создан')}</th>
+                    <th>{t('Идентификатор')}</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {r.data.map((token) => (
+                    <tr key={token.id}>
+                      <td>
+                        <strong>{token.name}</strong>
+                      </td>
+                      <td>{date(token.created_at)}</td>
+                      <td className="mono muted">{token.id}</td>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          aria-label={t('Удалить ') + token.name}
+                          onClick={() =>
+                            f.confirm(
+                              t('Удалить токен ') + token.name + '?',
+                              t('Сервисы, использующие этот ключ, потеряют доступ к API.'),
+                              async () => {
+                                await api('/api-tokens/' + token.id, 'DELETE')
+                                await r.refresh()
+                                f.notify(t('Токен отозван'))
+                              },
+                            )
+                          }
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
       {create && (
         <Modal title={t('Новый API-токен')} onClose={() => setCreate(false)}>
           <ActionForm

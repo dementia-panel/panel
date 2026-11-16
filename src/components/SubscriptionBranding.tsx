@@ -122,7 +122,7 @@ function BrandingForm({ initial }: { initial: SubscriptionBranding }) {
 export function SubscriptionBrandingSettings() {
   const { data, error, refresh } = useResource<SubscriptionBranding>(endpoint)
   return (
-    <section className="surface mt-6">
+    <section className="surface">
       <div className="section-head">
         <div>
           <h2>{t('Оформление страницы подписки')}</h2>

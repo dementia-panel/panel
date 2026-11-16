@@ -20,11 +20,32 @@ import { fetchProfile, profilePath, SubscriptionQR, type Location } from './Subs
 import './PublicSubscription.css'
 
 type Manifest = {
-  devices?: { id: string; name: string }[]
+  devices?: { id: string; name: string; online?: boolean; last_connected_at?: string | null }[]
   name: string
   expires_at?: string | null
   locations: Location[]
   branding?: SubscriptionBranding
+}
+
+export function applicationDownloadURL(
+  app: 'vpn' | 'wg',
+  userAgent = navigator.userAgent,
+  touchPoints = navigator.maxTouchPoints,
+): string {
+  const ios =
+    /iPhone|iPad|iPod/i.test(userAgent) || (/Macintosh/i.test(userAgent) && touchPoints > 1)
+  if (ios)
+    return app === 'vpn'
+      ? 'https://apps.apple.com/app/amneziavpn/id1600529900'
+      : 'https://apps.apple.com/app/amneziawg/id6478942365'
+  if (/Android/i.test(userAgent))
+    return (
+      'https://play.google.com/store/apps/details?id=' +
+      (app === 'vpn' ? 'org.amnezia.vpn' : 'org.amnezia.awg')
+    )
+  return app === 'vpn'
+    ? 'https://amnezia.org/downloads'
+    : 'https://docs.amnezia.org/documentation/amnezia-wg/'
 }
 
 function ServerCard({
@@ -161,7 +182,10 @@ export default function PublicSubscription() {
     const controller = new AbortController()
     setManifest(null)
     setFailure(null)
-    void (async () => {
+    let refreshing = false
+    const refresh = async () => {
+      if (refreshing) return
+      refreshing = true
       try {
         const result = await fetch(base + '/manifest', {
           credentials: 'omit',
@@ -170,17 +194,31 @@ export default function PublicSubscription() {
           signal: controller.signal,
         })
         if (!result.ok) {
-          if (!controller.signal.aborted)
+          if (!controller.signal.aborted) {
+            if (result.status === 404) setManifest(null)
             setFailure(result.status === 404 ? 'unavailable' : 'network')
+          }
           return
         }
         const value: Manifest = await result.json()
-        if (!controller.signal.aborted) setManifest(value)
+        if (!controller.signal.aborted) {
+          setManifest(value)
+          setFailure(null)
+        }
       } catch {
         if (!controller.signal.aborted) setFailure('network')
+      } finally {
+        refreshing = false
       }
-    })()
-    return () => controller.abort()
+    }
+    void refresh()
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void refresh()
+    }, 15000)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+    }
   }, [attempt, base])
 
   const device = manifest?.devices?.find((item) => item.id === deviceID) ?? manifest?.devices?.[0]
@@ -308,6 +346,26 @@ export default function PublicSubscription() {
                   />
                 </div>
               )}
+              {device && (
+                <div
+                  className={'subscription-device-status' + (device.online ? ' is-online' : '')}
+                  role="status"
+                >
+                  <strong>
+                    {device.name === 'Main device' ? t('Основное устройство') : device.name}
+                  </strong>
+                  <p>
+                    {device.online
+                      ? t('По этому ключу уже подключено устройство.')
+                      : t('Устройство сейчас не подключено.')}
+                  </p>
+                  {device.last_connected_at && (
+                    <small>
+                      {t('Последнее подключение')} · {date(device.last_connected_at)}
+                    </small>
+                  )}
+                </div>
+              )}
               <div className="subscription-section-title">
                 <h2>{t('Настройка подключения')}</h2>
                 <span>{t('Выберите приложение')}</span>
@@ -353,11 +411,7 @@ export default function PublicSubscription() {
                       </p>
                       <a
                         className="subscription-button"
-                        href={
-                          app === 'vpn'
-                            ? 'https://amnezia.org/downloads'
-                            : 'https://docs.amnezia.org/documentation/amnezia-wg/'
-                        }
+                        href={applicationDownloadURL(app)}
                         target="_blank"
                         rel="noopener noreferrer"
                       >

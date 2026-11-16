@@ -1236,3 +1236,20 @@
     padding: 4px 16px 20px;
   }
 }
+
+/* Page containers own the spacing between independent sections. */
+.app-shell .page-sections {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.app-shell .page-sections > * {
+  min-width: 0;
+  margin-block: 0;
+}
+
+.app-shell .device-subscription-link {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}

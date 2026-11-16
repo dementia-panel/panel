@@ -625,3 +625,23 @@
     transition: none;
   }
 }
+
+.subscription-device-status {
+  padding: 16px 18px;
+  border: 1px solid var(--sub-border, #303033);
+  border-radius: 16px;
+  margin-bottom: 24px;
+  color: #a1a1a6;
+}
+.subscription-device-status strong {
+  color: #f0f0f2;
+}
+.subscription-device-status p {
+  margin: 8px 0;
+}
+.subscription-device-status.is-online {
+  border-color: rgba(94, 201, 154, 0.35);
+}
+.subscription-device-status.is-online p {
+  color: #70d7aa;
+}

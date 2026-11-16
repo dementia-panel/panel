@@ -34,77 +34,81 @@ export default function SettingsPage() {
         title={t('Настройки')}
         description={t('Адрес панели и параметры подключения сервисов.')}
       />
-      <div className="settings-address">
-        <span className="settings-field-label">{t('Адрес панели')}</span>
-        <CopyValue value={window.location.origin} inputLabel={t('Адрес панели')} />
-      </div>
-      <section className="surface settings-language padded mt-6">
-        <div>
-          <h2 id="language-label">{t('Язык интерфейса')}</h2>
-          <p>{t('Язык сохраняется в этом браузере.')}</p>
+      <div className="page-sections">
+        <div className="settings-address">
+          <span className="settings-field-label">{t('Адрес панели')}</span>
+          <CopyValue value={window.location.origin} inputLabel={t('Адрес панели')} />
         </div>
-        <Select
-          labelledBy="language-label"
-          value={language}
-          onChange={(value) => setLanguage(value as 'en' | 'ru')}
-          options={[
-            { value: 'en', label: 'English', lang: 'en' },
-            { value: 'ru', label: 'Русский', lang: 'ru' },
-          ]}
-        />
-      </section>
-      <DeviceSettings />
-      <SubscriptionBrandingSettings />
-      <section className="surface mt-6">
-        <div className="section-head">
+        <section className="surface settings-language padded">
           <div>
-            <h2>{t('Интеграции')}</h2>
-            <p>{t('Параметры задаются в окружении backend и применяются после перезапуска.')}</p>
+            <h2 id="language-label">{t('Язык интерфейса')}</h2>
+            <p>{t('Язык сохраняется в этом браузере.')}</p>
           </div>
-          <Terminal size={20} />
-        </div>
-        {integrations.error && (
-          <ErrorNotice message={integrations.error} retry={() => void integrations.refresh()} />
-        )}
-        <div className="integration-row">
-          <Radio size={23} />
-          <div className="integration-body">
-            <div className="integration-title">
-              <h3>{t('Telegram-бот')}</h3>
-              <ConnectionStatus
-                status={integrations.data?.telegram}
-                unavailable={!!integrations.error}
-              />
+          <Select
+            labelledBy="language-label"
+            value={language}
+            onChange={(value) => setLanguage(value as 'en' | 'ru')}
+            options={[
+              { value: 'en', label: 'English', lang: 'en' },
+              { value: 'ru', label: 'Русский', lang: 'ru' },
+            ]}
+          />
+        </section>
+        <DeviceSettings />
+        <SubscriptionBrandingSettings />
+        <section className="surface">
+          <div className="section-head">
+            <div>
+              <h2>{t('Интеграции')}</h2>
+              <p>{t('Параметры задаются в окружении backend и применяются после перезапуска.')}</p>
             </div>
-            <p>{t('Уведомления о нодах и метриках. Поддерживаются polling и webhook.')}</p>
-            <code>TELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID · TELEGRAM_MODE</code>
-            <p className="integration-check">
-              {integrations.data?.telegram.checked_at
-                ? t('Последняя проверка: ') + date(integrations.data.telegram.checked_at)
-                : t('Статус обновляется по результатам обращений к Telegram API.')}
-            </p>
+            <Terminal size={20} />
           </div>
-        </div>
-        <div className="integration-row">
-          <Webhook size={23} />
-          <div className="integration-body">
-            <div className="integration-title">
-              <h3>{t('Webhook событий')}</h3>
-              <ConnectionStatus
-                status={integrations.data?.webhook}
-                unavailable={!!integrations.error}
-              />
+          {integrations.error && (
+            <ErrorNotice message={integrations.error} retry={() => void integrations.refresh()} />
+          )}
+          <div className="integration-row">
+            <Radio size={23} />
+            <div className="integration-body">
+              <div className="integration-title">
+                <h3>{t('Telegram-бот')}</h3>
+                <ConnectionStatus
+                  status={integrations.data?.telegram}
+                  unavailable={!!integrations.error}
+                />
+              </div>
+              <p>{t('Уведомления о нодах и метриках. Поддерживаются polling и webhook.')}</p>
+              <code>TELEGRAM_BOT_TOKEN · TELEGRAM_CHAT_ID · TELEGRAM_MODE</code>
+              <p className="integration-check">
+                {integrations.data?.telegram.checked_at
+                  ? t('Последняя проверка: ') + date(integrations.data.telegram.checked_at)
+                  : t('Статус обновляется по результатам обращений к Telegram API.')}
+              </p>
             </div>
-            <p>{t('События пользователей, нод и подписок. При пустом URL отправка отключена.')}</p>
-            <code>WEBHOOK_URL · WEBHOOK_SECRET_HEADER</code>
-            <p className="integration-check">
-              {integrations.data?.webhook.checked_at
-                ? t('Последняя попытка доставки: ') + date(integrations.data.webhook.checked_at)
-                : t('Связь проверяется при отправке событий.')}
-            </p>
           </div>
-        </div>
-      </section>
+          <div className="integration-row">
+            <Webhook size={23} />
+            <div className="integration-body">
+              <div className="integration-title">
+                <h3>{t('Webhook событий')}</h3>
+                <ConnectionStatus
+                  status={integrations.data?.webhook}
+                  unavailable={!!integrations.error}
+                />
+              </div>
+              <p>
+                {t('События пользователей, нод и подписок. При пустом URL отправка отключена.')}
+              </p>
+              <code>WEBHOOK_URL · WEBHOOK_SECRET_HEADER</code>
+              <p className="integration-check">
+                {integrations.data?.webhook.checked_at
+                  ? t('Последняя попытка доставки: ') + date(integrations.data.webhook.checked_at)
+                  : t('Связь проверяется при отправке событий.')}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
     </>
   )
 }
