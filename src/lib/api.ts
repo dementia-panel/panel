@@ -12,6 +12,12 @@ export class APIError extends Error {
 
 function messages(): Record<string, string> {
   return {
+    'device_limit must be 1–10000 or null': t('Укажите лимит от 1 до 10000.'),
+    'default_device_limit must be 1–10000 or null': t('Укажите лимит от 1 до 10000.'),
+    'device name must contain 1–128 bytes without control characters': t(
+      'Введите короткое название устройства без специальных управляющих символов.',
+    ),
+    'device limit reached': t('Достигнут лимит устройств. Удалите устройство или увеличьте лимит.'),
     'password setup required': t('Завершите первичную настройку администратора.'),
     'password setup is already complete': t('Первичная настройка уже завершена. Войдите снова.'),
     'invalid username or password length': t(

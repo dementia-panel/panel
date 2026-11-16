@@ -2,7 +2,6 @@ import { UserDetails } from '../components/UserDetails'
 import { FormSelect } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { api, date, useResource } from '../lib/api'
 import { ProfileActions } from './Subscriptions'
@@ -205,9 +204,6 @@ export default function UsersPage() {
                     <td className="muted">{date(u.last_connected_at)}</td>
                     <td>
                       <div className="row-actions">
-                        <Link className="text-link" to={'/subscriptions?user=' + u.id}>
-                          {t('Профили')}
-                        </Link>
                         <Button
                           variant="ghost"
                           aria-label={t('Изменить ') + u.username}

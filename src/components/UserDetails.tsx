@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { bytes, api, date, useResource } from '../lib/api'
 import { t } from '../lib/i18n'
 import type { Subscription, SubscriptionPlan, User } from '../lib/types'
+import { UserDevices } from './UserDevices'
 import { UserConnectionAccess } from './UserConnectionAccess'
 import { Select } from './Select'
 import { ActionForm, Badge, ErrorNotice, Field, Loading, Modal, useFeedback } from './ui'
@@ -203,7 +204,8 @@ export function UserDetails({
   onSaved: () => Promise<void>
   onIssued: (value: { id: string; planId: string; url?: string }) => void
 }) {
-  const user = useResource<User>('/users/' + userId)
+  const [tab, setTab] = useState<'details' | 'devices'>('details')
+  const user = useResource<User>('/users/' + userId, 15000)
   const access = useResource<Subscription | null>('/users/' + userId + '/subscription')
   const plans = useResource<SubscriptionPlan[]>('/subscription-plans')
   const error = user.error || access.error || plans.error
@@ -223,14 +225,50 @@ export function UserDetails({
       ) : (
         user.data &&
         plans.data && (
-          <DetailsForm
-            user={user.data}
-            access={access.data ?? null}
-            plans={plans.data}
-            onSaved={onSaved}
-            onIssued={onIssued}
-            onClose={onClose}
-          />
+          <>
+            <div className="user-device-summary">
+              <span>
+                {t('Выдано устройств')}: <strong>{user.data.device_count ?? 0}</strong>
+              </span>
+              <span>
+                {t('Сейчас подключено')}: <strong>{user.data.online_device_count ?? 0}</strong>
+              </span>
+            </div>
+            <div className="tabs user-detail-tabs" role="group" aria-label={t('Раздел карточки')}>
+              <button
+                type="button"
+                aria-pressed={tab === 'details'}
+                onClick={() => setTab('details')}
+              >
+                {t('Информация')}
+              </button>
+              <button
+                type="button"
+                aria-pressed={tab === 'devices'}
+                onClick={() => setTab('devices')}
+              >
+                {t('Устройства')}
+              </button>
+            </div>
+            {tab === 'devices' ? (
+              <UserDevices
+                user={user.data}
+                access={access.data ?? null}
+                onChanged={async () => {
+                  await Promise.all([user.refresh(), access.refresh(), onSaved()])
+                }}
+              />
+            ) : (
+              <DetailsForm
+                user={user.data}
+                access={access.data ?? null}
+                plans={plans.data}
+                onSaved={onSaved}
+                onIssued={onIssued}
+                onClose={onClose}
+              />
+            )}
+          </>
         )
       )}
     </Modal>

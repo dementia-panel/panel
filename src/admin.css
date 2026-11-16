@@ -1089,13 +1089,117 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.user-connection-heading { justify-content: space-between; }
-.user-connection-heading h3 { font-size: 15px; font-weight: 600; }
-.user-connection-heading > span { font-size: 12px; }
-.user-connection-link .copy-value { flex: 1; min-width: 0; }
-.user-connection-access > .btn { justify-self: start; }
-.user-connection-access > p { font-size: 13px; line-height: 1.6; }
-.user-connection-server { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
-.profile-qr { margin-top: 16px; }
-.profile-qr .subscription-qr-modes { display: flex; gap: 8px; }
-.profile-qr .subscription-qr-modes button[aria-pressed='true'] { background: #eee; color: #171717; }
+.user-connection-heading {
+  justify-content: space-between;
+}
+.user-connection-heading h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.user-connection-heading > span {
+  font-size: 12px;
+}
+.user-connection-link .copy-value {
+  flex: 1;
+  min-width: 0;
+}
+.user-connection-access > .btn {
+  justify-self: start;
+}
+.user-connection-access > p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.user-connection-server {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.profile-qr {
+  margin-top: 16px;
+}
+.profile-qr .subscription-qr-modes {
+  display: flex;
+  gap: 8px;
+}
+.profile-qr .subscription-qr-modes button[aria-pressed='true'] {
+  background: #eee;
+  color: #171717;
+}
+
+.user-device-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.user-device-summary strong {
+  color: #f4f4f5;
+}
+.user-detail-tabs {
+  margin-bottom: 24px;
+}
+.user-devices {
+  display: grid;
+  gap: 20px;
+}
+.user-device-limit {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.user-device-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.user-device-create > .field {
+  flex: 1;
+  min-width: 160px;
+}
+.user-device-create .btn {
+  min-height: 42px;
+}
+.user-device-card {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  background: #151517;
+}
+.user-device-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.user-device-title {
+  flex: 1;
+  min-width: 140px;
+  display: grid;
+  gap: 6px;
+}
+.user-device-title small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.user-device-card > .btn {
+  justify-self: start;
+}
+.user-devices p,
+.device-settings > p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.device-settings > h2 {
+  margin-bottom: 10px;
+}
+.device-settings > p {
+  margin-bottom: 20px;
+}

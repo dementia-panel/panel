@@ -587,3 +587,41 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.subscription-device-picker {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+  max-width: 420px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.subscription-apps > button > .subscription-app-icon {
+  display: inline-block;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  background-color: currentColor;
+  -webkit-mask: var(--client-mark) center / contain no-repeat;
+  mask: var(--client-mark) center / contain no-repeat;
+  transition: background-color 160ms ease;
+}
+.subscription-app-icon-vpn {
+  --client-mark: url('/assets/clients/amnezia-vpn.svg');
+}
+.subscription-app-icon-wg {
+  --client-mark: url('/assets/clients/amnezia-wg.svg');
+}
+@media (max-width: 640px) {
+  .subscription-apps > button > .subscription-app-icon {
+    flex-basis: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .subscription-apps > button > .subscription-app-icon {
+    transition: none;
+  }
+}

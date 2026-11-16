@@ -1,8 +1,48 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Введите короткое название устройства без специальных управляющих символов.':
+    'Enter a short device name without control characters.',
+  'Выдано устройств': 'Registered devices',
+  'Сейчас подключено': 'Connected now',
+  'Раздел карточки': 'User details section',
+  Информация: 'Information',
+  Устройства: 'Devices',
+  'Без лимита устройств': 'Unlimited devices',
+  'Лимит устройств': 'Device limit',
+  'Укажите лимит от 1 до 10000.': 'Enter a limit between 1 and 10000.',
+  'Лимит устройств сохранён': 'Device limit saved',
+  'Сохранить лимит': 'Save limit',
+  'Уменьшение лимита не удаляет существующие устройства, но запрещает выдачу новых ключей сверх лимита.':
+    'Reducing the limit preserves existing devices and prevents issuing keys beyond the limit.',
+  'Название устройства': 'Device name',
+  'Например, iPhone или рабочий ноутбук': 'For example, iPhone or work laptop',
+  'Добавить устройство': 'Add device',
+  'Устройство добавлено': 'Device added',
+  'Достигнут лимит устройств. Удалите устройство или увеличьте лимит.':
+    'Device limit reached. Remove a device or increase the limit.',
+  'Одно устройство — отдельный набор ключей для всех серверов подписки.':
+    'Each device has its own keys for all subscription servers.',
+  'Устройства ещё не добавлены.': 'No devices have been added.',
+  'Основное устройство': 'Main device',
+  Подключено: 'Connected',
+  'Переименовать устройство': 'Rename device',
+  'Удалить устройство': 'Delete device',
+  'Ключи этого устройства будут отозваны на всех нодах после синхронизации. Другие устройства сохранят доступ.':
+    'This device’s keys will be revoked on every node after synchronization. Other devices will keep access.',
+  'Новое название устройства': 'New device name',
+  'Устройство переименовано': 'Device renamed',
+  'Ключи подключения': 'Connection keys',
+  'Настройки устройств сохранены': 'Device settings saved',
+  'Устройства пользователей': 'User devices',
+  'Лимит устройств по умолчанию': 'Default device limit',
+  'Лимит применяется только к новым пользователям. В карточке пользователя его можно изменить или отключить.':
+    'The limit applies only to new users. You can change or disable it in each user’s details.',
+  'Устройство для подключения': 'Device to connect',
+
   'Уже выданные ключи': 'Previously issued keys',
   'Создать новую ссылку': 'Create a new link',
-  'Ссылка выпущена до обновления и не сохранена. Можно создать новую ссылку без замены VPN-ключей.': 'This link was issued before the update and was not saved. You can create a new link while preserving the VPN keys.',
+  'Ссылка выпущена до обновления и не сохранена. Можно создать новую ссылку без замены VPN-ключей.':
+    'This link was issued before the update and was not saved. You can create a new link while preserving the VPN keys.',
 
   'Не удалось открыть страницу': 'Unable to open this page',
   'Обновите приложение, чтобы восстановить работу.': 'Reload the application to restore access.',

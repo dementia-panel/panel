@@ -9,10 +9,14 @@ let signedIn = true
 let calls: { path: string; method: string; body: Record<string, unknown> }[]
 let createdUsers: Record<string, unknown>[]
 let createdPlans: Record<string, unknown>[]
+let createdDevices: Record<string, unknown>[]
+let deviceDefault: number | null
 let createdSubscriptions: Record<string, unknown>[]
 beforeEach(() => {
   signedIn = true
   calls = []
+  createdDevices = []
+  deviceDefault = 3
   createdUsers = []
   createdSubscriptions = []
   createdPlans = []
@@ -42,6 +46,41 @@ beforeEach(() => {
           return respond({ error: 'invalid username or password' }, 401)
         signedIn = true
         return respond({ username: body.username })
+      }
+      if (path === '/api/admin/settings/devices') {
+        if (method === 'PUT') deviceDefault = body.default_device_limit
+        return respond({ default_device_limit: deviceDefault })
+      }
+      if (path === '/api/admin/users/user-1/device-limit') {
+        Object.assign(createdUsers[0], { device_limit: body.device_limit })
+        return respond(undefined, 204)
+      }
+      if (path === '/api/admin/users/user-1/devices') {
+        if (method === 'POST') {
+          const record = createdUsers[0]
+          if (record.device_limit != null && createdDevices.length >= Number(record.device_limit))
+            return respond({ error: 'device limit reached' }, 409)
+          const device = {
+            id: 'device-' + (createdDevices.length + 1),
+            user_id: 'user-1',
+            name: body.name,
+            online: false,
+            last_connected_at: null,
+          }
+          createdDevices.push(device)
+          return respond(device, 201)
+        }
+        return respond(createdDevices)
+      }
+      if (/^\/api\/admin\/users\/user-1\/devices\/[^/]+\/nodes\/node-1\/profile$/.test(path))
+        return respond({ conf: '[Interface]', key: 'vpn://existing-key' })
+      if (/^\/api\/admin\/users\/user-1\/devices\/[^/]+$/.test(path)) {
+        const id = path.split('/')[6]
+        if (method === 'PATCH')
+          Object.assign(createdDevices.find((device) => device.id === id) ?? {}, body)
+        if (method === 'DELETE')
+          createdDevices = createdDevices.filter((device) => device.id !== id)
+        return respond(undefined, 204)
       }
       if (path === '/api/admin/settings/subscription-branding')
         return respond(method === 'PUT' ? body : { name: 'dementia', logo: '' })
@@ -83,6 +122,11 @@ beforeEach(() => {
           Object.assign(record ?? {}, body)
           return respond(undefined, 204)
         }
+        if (record)
+          Object.assign(record, {
+            device_count: createdDevices.length,
+            online_device_count: createdDevices.filter((device) => device.online).length,
+          })
         return respond(record)
       }
       if (path === '/api/admin/nodes' && method === 'POST')
@@ -110,7 +154,8 @@ beforeEach(() => {
       }
       if (path === '/api/admin/subscription-plans') return respond(createdPlans)
       if (path === '/api/admin/subscriptions') return respond(createdSubscriptions)
-      if (path === '/api/admin/subscriptions/sub-1/link') return respond({ url: 'https://example.test/s/existing-subscription' })
+      if (path === '/api/admin/subscriptions/sub-1/link')
+        return respond({ url: 'https://example.test/s/existing-subscription' })
       if (path === '/api/admin/subscriptions/sub-1/nodes/node-1/profile')
         return respond({ conf: '[Interface]', key: 'vpn://existing-key' })
       if (path === '/api/admin/api-tokens' && method === 'POST')
@@ -417,7 +462,7 @@ test('updates the subscription page branding from settings', async () => {
   const name = await screen.findByRole('textbox', { name: 'Название проекта' })
   await user.clear(name)
   await user.type(name, 'Northern Relay')
-  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  await user.click(within(name.closest('form')!).getByRole('button', { name: 'Сохранить' }))
   await screen.findByText('Оформление страницы подписки сохранено.')
   expect(calls).toContainEqual({
     path: '/api/admin/settings/subscription-branding',
@@ -504,7 +549,11 @@ test('opens the user card, saves subscription expiration and can pause access', 
   expect(screen.getByRole('button', { name: 'Скачать .conf' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Скачать .vpn' })).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Скопировать' }))
-  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('https://example.test/s/existing-subscription'))
+  await waitFor(async () =>
+    expect(await navigator.clipboard.readText()).toBe(
+      'https://example.test/s/existing-subscription',
+    ),
+  )
   await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
   await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
   expect(calls.filter((call) => call.method !== 'GET')).toEqual([])
@@ -562,4 +611,122 @@ test('selects the nearest chart day on pointer movement and supports keyboard na
   expect(plot.getAttribute('aria-valuenow')).toBe('2')
   await user.keyboard('{Home}')
   expect(plot.getAttribute('aria-valuenow')).toBe('0')
+})
+
+test('manages named devices and their limit from the user card without rotating existing keys', async () => {
+  createdUsers = [
+    {
+      id: 'user-1',
+      username: 'boris',
+      telegram_id: null,
+      enabled: true,
+      subscription_plan_id: 'plan-1',
+      device_limit: 2,
+    },
+  ]
+  createdPlans = [{ id: 'plan-1', name: 'Europe', node_ids: ['node-1'] }]
+  createdSubscriptions = [
+    { id: 'sub-1', user_id: 'user-1', plan_id: 'plan-1', enabled: true, node_ids: ['node-1'] },
+  ]
+  createdDevices = [
+    { id: 'device-1', name: 'iPhone', online: true, last_connected_at: '2026-11-16T10:00:00Z' },
+    { id: 'device-2', name: 'Laptop', online: false },
+  ]
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/users')
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: 'Открыть пользователя boris' }))
+  await user.click(await screen.findByRole('button', { name: 'Устройства' }))
+  await screen.findByText('iPhone')
+  await screen.findByText('Laptop')
+  expect(
+    (screen.getByRole('button', { name: 'Добавить устройство' }) as HTMLButtonElement).disabled,
+  ).toBe(true)
+  await user.click(screen.getByRole('checkbox', { name: 'Без лимита устройств' }))
+  await user.click(screen.getByRole('button', { name: 'Сохранить лимит' }))
+  await screen.findByText('Лимит устройств сохранён')
+  expect(calls.find((call) => call.path.endsWith('/device-limit'))?.body).toEqual({
+    device_limit: null,
+  })
+  await user.type(screen.getByLabelText('Название устройства'), 'Work Mac')
+  await user.click(screen.getByRole('button', { name: 'Добавить устройство' }))
+  await screen.findByText('Work Mac')
+  await user.click(screen.getByRole('button', { name: 'Переименовать устройство: iPhone' }))
+  await user.clear(screen.getByLabelText('Новое название устройства'))
+  await user.type(screen.getByLabelText('Новое название устройства'), 'Personal iPhone')
+  await user.click(screen.getByRole('button', { name: /^Сохранить$/ }))
+  const title = await screen.findByText('Personal iPhone')
+  const article = title.closest('article')!
+  await user.click(within(article).getByRole('button', { name: 'Ключи подключения' }))
+  await user.click(within(article).getByRole('button', { name: 'Скопировать vpn://' }))
+  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
+  expect(
+    calls.some(
+      (call) => call.path.includes('/device-1/nodes/node-1/profile') && call.method === 'GET',
+    ),
+  ).toBe(true)
+  await user.click(screen.getByRole('button', { name: 'Удалить устройство: Work Mac' }))
+  await user.click(screen.getByRole('button', { name: 'Подтвердить' }))
+  await waitFor(() => expect(screen.queryByText('Work Mac')).toBeNull())
+  expect(screen.getByText('Personal iPhone')).toBeTruthy()
+  expect(calls.some((call) => /rotate-link|revoke/.test(call.path))).toBe(false)
+})
+
+test('saves the default device limit and can disable it for new users', async () => {
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/settings')
+  render(<App />)
+  const limit = await screen.findByLabelText('Лимит устройств по умолчанию')
+  await user.clear(limit)
+  await user.type(limit, '5')
+  const section = screen.getByText('Устройства пользователей').closest('section')!
+  await user.click(within(section).getByRole('button', { name: /^Сохранить$/ }))
+  await screen.findByText('Настройки устройств сохранены')
+  expect(deviceDefault).toBe(5)
+  await user.click(within(section).getByRole('checkbox', { name: 'Без лимита устройств' }))
+  await user.click(within(section).getByRole('button', { name: /^Сохранить$/ }))
+  await waitFor(() => expect(deviceDefault).toBeNull())
+})
+
+test('switches subscription devices without keeping another device key visible', async () => {
+  const user = userEvent.setup()
+  const path = '/s/device-demo'
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      if (url === path + '/manifest')
+        return Response.json({
+          name: 'Device subscription',
+          devices: [
+            { id: 'phone', name: 'iPhone' },
+            { id: 'laptop', name: 'Laptop' },
+          ],
+          locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
+        })
+      if (url === path + '/devices/phone/nodes/node-1.key') return new Response('vpn://phone-key')
+      if (url === path + '/devices/laptop/nodes/node-1.key') return new Response('vpn://laptop-key')
+      throw new Error('Unexpected request: ' + url)
+    }),
+  )
+  signedIn = false
+  window.history.replaceState({}, '', path)
+  render(<App />)
+  await screen.findByRole('heading', { name: 'Device subscription' })
+  await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
+  expect(
+    (await screen.findByRole<HTMLTextAreaElement>('textbox', { name: 'Ключ vpn://' })).value,
+  ).toBe('vpn://phone-key')
+  await user.click(screen.getByRole('combobox', { name: 'Устройство для подключения' }))
+  await user.click(screen.getByRole('option', { name: 'Laptop' }))
+  expect(screen.queryByRole('textbox', { name: 'Ключ vpn://' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'AmneziaVPN .vpn' }).getAttribute('href')).toBe(
+    path + '/devices/laptop/nodes/node-1.vpn',
+  )
+  await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
+  expect(
+    (await screen.findByRole<HTMLTextAreaElement>('textbox', { name: 'Ключ vpn://' })).value,
+  ).toBe('vpn://laptop-key')
+  expect(
+    (screen.getByRole('textbox', { name: 'Ссылка на подписку' }) as HTMLInputElement).value,
+  ).toContain('?device_id=laptop')
 })

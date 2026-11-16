@@ -30,10 +30,12 @@ export function ProfileActions({
   subscriptionId,
   nodeId,
   name,
+  endpoint,
 }: {
   subscriptionId: string
   nodeId: string
   name: string
+  endpoint?: string
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +49,9 @@ export function ProfileActions({
     setError('')
     setManualKey('')
     try {
-      const profile = api<ProfileExport>(`/subscriptions/${subscriptionId}/nodes/${nodeId}/profile`)
+      const profile = api<ProfileExport>(
+        endpoint ?? `/subscriptions/${subscriptionId}/nodes/${nodeId}/profile`,
+      )
       if (action === 'copy') {
         try {
           if (typeof ClipboardItem === 'function' && navigator.clipboard?.write) {
@@ -110,14 +114,27 @@ export function ProfileActions({
       </div>
       {qr && (
         <div className="subscription-qr profile-qr">
-          <div className="subscription-qr-modes" role="group" aria-label={t('Приложение для сканирования')}>
+          <div
+            className="subscription-qr-modes"
+            role="group"
+            aria-label={t('Приложение для сканирования')}
+          >
             {(['vpn', 'wg'] as const).map((mode) => (
-              <Button type="button" key={mode} aria-pressed={qrMode === mode} onClick={() => setQRMode(mode)}>
+              <Button
+                type="button"
+                key={mode}
+                aria-pressed={qrMode === mode}
+                onClick={() => setQRMode(mode)}
+              >
                 {mode === 'vpn' ? 'AmneziaVPN' : 'AmneziaWG'}
               </Button>
             ))}
           </div>
-          <QRFrames key={qrMode} frames={qrMode === 'vpn' ? qr.vpn : qr.awg} label={t(qrMode === 'vpn' ? 'QR-код AmneziaVPN' : 'QR-код AmneziaWG')} />
+          <QRFrames
+            key={qrMode}
+            frames={qrMode === 'vpn' ? qr.vpn : qr.awg}
+            label={t(qrMode === 'vpn' ? 'QR-код AmneziaVPN' : 'QR-код AmneziaWG')}
+          />
           <p className="subscription-qr-help">
             {qrMode === 'vpn'
               ? t('Наведите камеру в AmneziaVPN и дождитесь, пока приложение считает все кадры.')

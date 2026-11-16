@@ -20,6 +20,7 @@ import { fetchProfile, profilePath, SubscriptionQR, type Location } from './Subs
 import './PublicSubscription.css'
 
 type Manifest = {
+  devices?: { id: string; name: string }[]
   name: string
   expires_at?: string | null
   locations: Location[]
@@ -150,6 +151,9 @@ export default function PublicSubscription() {
   const [qr, setQR] = useState<{ server?: string } | null>(null)
   const [app, setApp] = useState<'vpn' | 'wg'>('vpn')
   const [selectedId, setSelectedId] = useState('')
+  const [deviceID, setDeviceID] = useState(
+    () => new URLSearchParams(window.location.search).get('device_id') ?? '',
+  )
   const serverLabel = useId()
   const base = '/s/' + encodeURIComponent(token)
 
@@ -179,6 +183,8 @@ export default function PublicSubscription() {
     return () => controller.abort()
   }, [attempt, base])
 
+  const device = manifest?.devices?.find((item) => item.id === deviceID) ?? manifest?.devices?.[0]
+  const profileBase = device ? base + '/devices/' + encodeURIComponent(device.id) : base
   const available = manifest?.locations.filter((location) => location.available) ?? []
   const selected =
     manifest?.locations.find((location) => location.id === selectedId) ??
@@ -288,6 +294,20 @@ export default function PublicSubscription() {
         {manifest && (
           <>
             <section className="subscription-install">
+              {!!manifest?.devices?.length && (
+                <div className="subscription-device-picker">
+                  <span id="subscription-device-label">{t('Устройство для подключения')}</span>
+                  <Select
+                    labelledBy="subscription-device-label"
+                    value={device?.id ?? ''}
+                    onChange={setDeviceID}
+                    options={manifest.devices.map((item) => ({
+                      value: item.id,
+                      label: item.name === 'Main device' ? t('Основное устройство') : item.name,
+                    }))}
+                  />
+                </div>
+              )}
               <div className="subscription-section-title">
                 <h2>{t('Настройка подключения')}</h2>
                 <span>{t('Выберите приложение')}</span>
@@ -299,7 +319,10 @@ export default function PublicSubscription() {
                   aria-label={t('Приложение для подключения')}
                 >
                   <button type="button" aria-pressed={app === 'vpn'} onClick={() => setApp('vpn')}>
-                    <ShieldCheck size={25} />
+                    <span
+                      className="subscription-app-icon subscription-app-icon-vpn"
+                      aria-hidden="true"
+                    />
                     <span>
                       <strong>AmneziaVPN</strong>
                       <small>{t('Ключ и конфиг .vpn')}</small>
@@ -307,7 +330,10 @@ export default function PublicSubscription() {
                     {app === 'vpn' && <Check size={17} />}
                   </button>
                   <button type="button" aria-pressed={app === 'wg'} onClick={() => setApp('wg')}>
-                    <Server size={25} />
+                    <span
+                      className="subscription-app-icon subscription-app-icon-wg"
+                      aria-hidden="true"
+                    />
                     <span>
                       <strong>AmneziaWG</strong>
                       <small>{t('Конфиг .conf')}</small>
@@ -371,9 +397,9 @@ export default function PublicSubscription() {
                             />
                           </div>
                           <ServerCard
-                            key={selected.id + app}
+                            key={profileBase + selected.id + app}
                             location={selected}
-                            base={base}
+                            base={profileBase}
                             app={app}
                             openQR={() => setQR({ server: selected.id })}
                           />
@@ -408,7 +434,12 @@ export default function PublicSubscription() {
                 </button>
               </div>
               <CopyValue
-                value={new URL(base, window.location.origin).href}
+                value={
+                  new URL(
+                    device ? base + '?device_id=' + encodeURIComponent(device.id) : base,
+                    window.location.origin,
+                  ).href
+                }
                 inputLabel={t('Ссылка на подписку')}
               />
               <p>
@@ -422,7 +453,7 @@ export default function PublicSubscription() {
       </main>
       {qr && (
         <SubscriptionQR
-          base={base}
+          base={profileBase}
           locations={available}
           initialServer={qr.server}
           initialMode={qr.server ? app : 'link'}

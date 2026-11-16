@@ -85,7 +85,10 @@ export function SubscriptionQR({
         const { toDataURL } = await import('qrcode')
         let payloads: string[]
         if (mode === 'link') {
-          payloads = [new URL(root, window.location.origin).href]
+          payloads = [
+            new URL(root.replace(/\/devices\/([^/]+)$/, '?device_id=$1'), window.location.origin)
+              .href,
+          ]
         } else {
           const profile = await fetchProfile(
             root + (mode === 'vpn' ? '.key' : '.conf'),

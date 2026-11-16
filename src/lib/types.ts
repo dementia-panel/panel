@@ -8,6 +8,9 @@ export interface User {
   updated_at: string
   last_connected_at: string | null
   online: boolean
+  device_limit: number | null
+  device_count: number
+  online_device_count: number
 }
 export interface Node {
   id: string
@@ -83,4 +86,14 @@ export interface SubscriptionPlan {
 export interface SubscriptionBranding {
   name: string
   logo: string
+}
+
+export interface UserDevice {
+  id: string
+  user_id: string
+  name: string
+  created_at: string
+  updated_at: string
+  last_connected_at: string | null
+  online: boolean
 }

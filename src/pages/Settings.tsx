@@ -4,6 +4,7 @@ import { Badge, CopyValue, ErrorNotice, Heading } from '../components/ui'
 import { date, useResource } from '../lib/api'
 import type { IntegrationStatus, Integrations } from '../lib/types'
 import { Select } from '../components/Select'
+import { DeviceSettings } from '../components/DeviceSettings'
 import { SubscriptionBrandingSettings } from '../components/SubscriptionBranding'
 
 function ConnectionStatus({
@@ -52,6 +53,7 @@ export default function SettingsPage() {
           ]}
         />
       </section>
+      <DeviceSettings />
       <SubscriptionBrandingSettings />
       <section className="surface mt-6">
         <div className="section-head">
