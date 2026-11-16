@@ -211,66 +211,68 @@ export function UserDetails({
   const error = user.error || access.error || plans.error
   return (
     <Modal title={t('Карточка пользователя')} onClose={onClose} wide className="user-details-modal">
-      {error ? (
-        <ErrorNotice
-          message={error}
-          retry={() => {
-            void user.refresh()
-            void access.refresh()
-            void plans.refresh()
-          }}
-        />
-      ) : user.loading || access.loading || plans.loading ? (
-        <Loading />
-      ) : (
-        user.data &&
-        plans.data && (
-          <>
-            <div className="user-device-summary">
-              <span>
-                {t('Выдано устройств')}: <strong>{user.data.device_count ?? 0}</strong>
-              </span>
-              <span>
-                {t('Сейчас подключено')}: <strong>{user.data.online_device_count ?? 0}</strong>
-              </span>
-            </div>
-            <div className="tabs user-detail-tabs" role="group" aria-label={t('Раздел карточки')}>
-              <button
-                type="button"
-                aria-pressed={tab === 'details'}
-                onClick={() => setTab('details')}
-              >
-                {t('Информация')}
-              </button>
-              <button
-                type="button"
-                aria-pressed={tab === 'devices'}
-                onClick={() => setTab('devices')}
-              >
-                {t('Устройства')}
-              </button>
-            </div>
-            {tab === 'devices' ? (
-              <UserDevices
-                user={user.data}
-                access={access.data ?? null}
-                onChanged={async () => {
-                  await Promise.all([user.refresh(), access.refresh(), onSaved()])
-                }}
-              />
-            ) : (
-              <DetailsForm
-                user={user.data}
-                access={access.data ?? null}
-                plans={plans.data}
-                onSaved={onSaved}
-                onIssued={onIssued}
-                onClose={onClose}
-              />
-            )}
-          </>
-        )
-      )}
+      <div className="user-details-body">
+        {error ? (
+          <ErrorNotice
+            message={error}
+            retry={() => {
+              void user.refresh()
+              void access.refresh()
+              void plans.refresh()
+            }}
+          />
+        ) : user.loading || access.loading || plans.loading ? (
+          <Loading />
+        ) : (
+          user.data &&
+          plans.data && (
+            <>
+              <div className="user-device-summary">
+                <span>
+                  {t('Выдано устройств')}: <strong>{user.data.device_count ?? 0}</strong>
+                </span>
+                <span>
+                  {t('Сейчас подключено')}: <strong>{user.data.online_device_count ?? 0}</strong>
+                </span>
+              </div>
+              <div className="tabs user-detail-tabs" role="group" aria-label={t('Раздел карточки')}>
+                <button
+                  type="button"
+                  aria-pressed={tab === 'details'}
+                  onClick={() => setTab('details')}
+                >
+                  {t('Информация')}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={tab === 'devices'}
+                  onClick={() => setTab('devices')}
+                >
+                  {t('Устройства')}
+                </button>
+              </div>
+              {tab === 'devices' ? (
+                <UserDevices
+                  user={user.data}
+                  access={access.data ?? null}
+                  onChanged={async () => {
+                    await Promise.all([user.refresh(), access.refresh(), onSaved()])
+                  }}
+                />
+              ) : (
+                <DetailsForm
+                  user={user.data}
+                  access={access.data ?? null}
+                  plans={plans.data}
+                  onSaved={onSaved}
+                  onIssued={onIssued}
+                  onClose={onClose}
+                />
+              )}
+            </>
+          )
+        )}
+      </div>
     </Modal>
   )
 }

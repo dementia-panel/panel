@@ -1203,3 +1203,36 @@
 .device-settings > p {
   margin-bottom: 20px;
 }
+
+/* Keep both user tabs inside the same padded, independently scrolling body. */
+.modal.user-details-modal[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal.user-details-modal > .modal-head {
+  flex: 0 0 auto;
+}
+.modal.user-details-modal > .user-details-body {
+  min-height: 0;
+  padding: 4px 24px 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.modal.user-details-modal .user-details-body form {
+  padding: 0;
+}
+.modal.user-details-modal .user-details-body .form-fields {
+  max-height: none;
+  overflow: visible;
+}
+@media (max-width: 640px) {
+  .modal.user-details-modal > .modal-head {
+    padding: 18px 16px 14px;
+  }
+  .modal.user-details-modal > .user-details-body {
+    padding: 4px 16px 20px;
+  }
+}
