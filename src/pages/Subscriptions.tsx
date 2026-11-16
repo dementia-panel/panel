@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -182,18 +183,18 @@ function IssuedAccessPage() {
             onChange={setSearch}
             placeholder={t('Подписка или пользователь')}
           />
-          <select
-            aria-label={t('Фильтр по пользователю')}
+          <Select
+            ariaLabel={t('Фильтр по пользователю')}
             value={user}
-            onChange={(e) => setUser(e.target.value)}
-          >
-            <option value="">{t('Все пользователи')}</option>
-            {users.data?.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.username}
-              </option>
-            ))}
-          </select>
+            onChange={setUser}
+            options={[
+              { value: '', label: t('Все пользователи') },
+              ...(users.data || []).map((item) => ({
+                value: item.id,
+                label: item.username,
+              })),
+            ]}
+          />
         </div>
         {[r.error, users.error, nodes.error].filter(Boolean).map((e, i) => (
           <ErrorNotice key={i} message={e!} />

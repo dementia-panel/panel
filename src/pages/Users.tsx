@@ -1,3 +1,5 @@
+import { UserDetails } from '../components/UserDetails'
+import { FormSelect } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -28,6 +30,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [edit, setEdit] = useState<User | 'new' | null>(null)
+  const [detailsId, setDetailsId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const feedback = useFeedback()
   const data = resource.data || []
@@ -155,7 +158,14 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {visible.map((u) => (
-                  <tr key={u.id}>
+                  <tr
+                    key={u.id}
+                    className="user-clickable-row"
+                    onClick={(event) => {
+                      if (!(event.target as HTMLElement).closest('button, a, input'))
+                        setDetailsId(u.id)
+                    }}
+                  >
                     <td>
                       <input
                         type="checkbox"
@@ -171,7 +181,12 @@ export default function UsersPage() {
                       />
                     </td>
                     <td>
-                      <div className="user-cell">
+                      <button
+                        type="button"
+                        className="user-cell user-open-button"
+                        onClick={() => setDetailsId(u.id)}
+                        aria-label={t('Открыть пользователя ') + u.username}
+                      >
                         <span className="user-avatar">{u.username.slice(0, 2).toUpperCase()}</span>
                         <div>
                           <strong>{u.username}</strong>
@@ -179,7 +194,7 @@ export default function UsersPage() {
                             {u.online ? t('Сейчас в VPN') : t('Не в сети')}
                           </small>
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td>
                       <Badge tone={u.enabled ? 'success' : 'neutral'}>
@@ -196,7 +211,7 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           aria-label={t('Изменить ') + u.username}
-                          onClick={() => setEdit(u)}
+                          onClick={() => setDetailsId(u.id)}
                         >
                           <Pencil size={15} />
                         </Button>
@@ -302,18 +317,19 @@ export default function UsersPage() {
               />
             </Field>
             <Field label={t('Подписка')}>
-              <select
+              <FormSelect
                 name="plan_id"
+                label={t('Подписка')}
                 defaultValue={edit === 'new' ? '' : edit.subscription_plan_id || ''}
                 disabled={!plans.data}
-              >
-                <option value="">{t('Без подписки')}</option>
-                {(plans.data || []).map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: t('Без подписки') },
+                  ...(plans.data || []).map((plan) => ({
+                    value: plan.id,
+                    label: plan.name,
+                  })),
+                ]}
+              />
             </Field>
             {plans.error && (
               <ErrorNotice message={plans.error} retry={() => void plans.refresh()} />
@@ -334,6 +350,14 @@ export default function UsersPage() {
             )}
           </ActionForm>
         </Modal>
+      )}
+      {detailsId && (
+        <UserDetails
+          userId={detailsId}
+          onClose={() => setDetailsId(null)}
+          onSaved={resource.refresh}
+          onIssued={setIssued}
+        />
       )}
       {issued && (
         <Modal

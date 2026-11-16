@@ -50,7 +50,6 @@ export function useLanguage() {
   const language = useSyncExternalStore(subscribe, snapshot, () => 'en' as const)
   useEffect(() => {
     document.documentElement.lang = language
-    document.title = 'dementia · ' + t('Управление сетью')
   }, [language])
   return { language, setLanguage }
 }

@@ -422,4 +422,91 @@ export const english: Record<string, string> = {
   'Язык интерфейса': 'Interface language',
   'Язык сохраняется в этом браузере.': 'Your language preference is saved in this browser.',
   'Управление сетью': 'Network management',
+  'Скопируйте ключ из поля ниже.': 'Copy the key from the field below.',
+  'Профиль пока недоступен. Обновите страницу и попробуйте снова.':
+    'This profile is temporarily unavailable. Refresh the page and try again.',
+  Доступен: 'Available',
+  Недоступен: 'Unavailable',
+  'QR-коды': 'QR codes',
+  'Скрыть ключ': 'Hide key',
+  'Показать ключ': 'Show key',
+  'Профиль появится, когда сервер синхронизируется.':
+    'The profile will appear when the server finishes syncing.',
+  'Откройте сканер QR-кодов в нужном VPN-приложении.': 'Open the QR code scanner in your VPN app.',
+  'Подключение к VPN': 'VPN connection',
+  'Подписка недоступна': 'Subscription unavailable',
+  'Загрузка подписки…': 'Loading subscription…',
+  'Выберите сервер и импортируйте профиль в ваше VPN-приложение.':
+    'Choose a server and import its profile into your VPN app.',
+  'Проверьте ссылку или запросите новую у администратора.':
+    'Check the link or ask your administrator for a new one.',
+  'Не удалось загрузить настройки подключения.': 'Unable to load connection settings.',
+  'Серверы подключения': 'VPN servers',
+  'Оформление страницы подписки': 'Subscription page branding',
+  'Название и логотип видны всем, кто откроет страницу по ссылке подписки.':
+    'The name and logo are visible to anyone who opens a subscription link.',
+  Предпросмотр: 'Preview',
+  'Название проекта': 'Project name',
+  Логотип: 'Logo',
+  'Вернуть стандартный логотип': 'Restore default logo',
+  'Выберите PNG или JPEG размером до 256 КБ.': 'Choose a PNG or JPEG up to 256 KB.',
+  'Не удалось прочитать логотип.': 'Unable to read the logo.',
+  'Оформление страницы подписки сохранено.': 'Subscription page branding saved.',
+  'Введите название длиной до 64 символов.': 'Enter a name up to 64 characters long.',
+  'Выберите PNG или JPEG до 256 КБ и 2048 × 2048 пикселей.':
+    'Choose a PNG or JPEG up to 256 KB and 2048 × 2048 pixels.',
+  'Вся подписка': 'Entire subscription',
+  'Откройте страницу со всеми серверами на телефоне или скачайте конфиги доступных серверов одним архивом.':
+    'Open the page with all servers on your phone or download the available configurations as one archive.',
+  'QR подписки': 'Subscription QR',
+  'Ссылка подписки': 'Subscription link',
+  Кадр: 'Frame',
+  'Приостановить смену кадров': 'Pause frame rotation',
+  'Продолжить смену кадров': 'Resume frame rotation',
+  'Приложение для сканирования': 'Scanner app',
+  Сервер: 'Server',
+  'QR-код ссылки подписки': 'Subscription link QR code',
+  'Не удалось создать QR-код.': 'Unable to generate the QR code.',
+  'Готовим QR-код…': 'Generating QR code…',
+  'Скачать конфиг': 'Download config',
+  'Отсканируйте камерой телефона, чтобы открыть страницу со всеми серверами.':
+    'Scan with your phone camera to open the page with all servers.',
+  'Наведите камеру в AmneziaVPN и дождитесь, пока приложение считает все кадры.':
+    'Scan in AmneziaVPN and hold the camera in place until the app reads every frame.',
+  'Отсканируйте этот код в AmneziaWG, чтобы добавить выбранный сервер.':
+    'Scan in AmneziaWG to add the selected server.',
+  'Подписка активна': 'Subscription active',
+  'Срок действия': 'Valid until',
+  'Без ограничения срока': 'No expiration',
+  доступно: 'available',
+  'Выберите приложение': 'Choose your app',
+  'Приложение для подключения': 'VPN app',
+  'Ключ и конфиг .vpn': 'Connection key and .vpn profile',
+  'Конфиг .conf': '.conf profile',
+  'Установка приложения': 'Install the app',
+  'Установите приложение для вашего устройства. Затем вернитесь на эту страницу.':
+    'Install the app for your device, then return to this page.',
+  'Скачать приложение': 'Download app',
+  'Добавление сервера': 'Add your server',
+  'Скопируйте ключ и вставьте его в AmneziaVPN. Также можно импортировать файл .vpn или отсканировать QR-код.':
+    'Copy the key and paste it into AmneziaVPN. You can also import a .vpn file or scan the QR code.',
+  'Скачайте файл .conf и импортируйте его в AmneziaWG. Для подключения с другого устройства используйте QR-код.':
+    'Download the .conf file and import it into AmneziaWG. To connect on another device, scan the QR code.',
+  'Подключение и использование': 'Connect and enjoy',
+  'Включите VPN в приложении и разрешите добавление VPN-конфигурации, если устройство запросит подтверждение.':
+    'Connect in the app and allow the VPN configuration if your device asks for permission.',
+  'Ссылка на подписку': 'Subscription link',
+  'Сохраните эту ссылку, чтобы вернуться к своим серверам и настройкам подключения.':
+    'Save this link to return to your servers and connection settings.',
+  'Настройка подключения': 'Connection setup',
+  'Карточка пользователя': 'User details',
+  'Открыть пользователя ': 'Open user ',
+  'Выключение приостанавливает доступ по выданным ключам.':
+    'Turning this off pauses access through the issued keys.',
+  'Включительно до конца выбранного дня.': 'Valid through the end of the selected day.',
+  'Выберите дату окончания подписки.': 'Choose the subscription expiration date.',
+  'Без ограничений': 'Unlimited',
+  'Объём за день': 'Daily volume',
+  'Дневной трафик · стрелками выберите дату': 'Daily traffic · use arrow keys to select a date',
+  до: 'until',
 }

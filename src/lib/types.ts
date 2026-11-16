@@ -79,3 +79,8 @@ export interface SubscriptionPlan {
   name: string
   node_ids: string[]
 }
+
+export interface SubscriptionBranding {
+  name: string
+  logo: string
+}

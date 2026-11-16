@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, Network, Plus, Server, Users } from 'lucid
 import { Link } from 'react-router-dom'
 import { useResource, bytes, date } from '../lib/api'
 import type { Node, User, Subscription, Traffic } from '../lib/types'
+import { TrafficTrend } from '../components/TrafficTrend'
 import { Badge, Empty, ErrorNotice, Heading, Loading } from '../components/ui'
 
 export default function Overview() {
@@ -75,6 +76,37 @@ export default function Overview() {
         />
       </div>
       <div className="overview-grid">
+        <section className="surface overview-traffic">
+          <div className="section-head">
+            <div>
+              <h2>{t('Передача данных')}</h2>
+              <p>{t('Последние 7 дней · UTC')}</p>
+            </div>
+          </div>
+          {traffic.error ? (
+            <ErrorNotice message={traffic.error} />
+          ) : (
+            <>
+              <div className="traffic-totals">
+                <div className="traffic-received">
+                  <ArrowDownLeft size={17} />
+                  <span>
+                    {t('Получено')}
+                    <strong>{bytes(totals.rx)}</strong>
+                  </span>
+                </div>
+                <div className="traffic-sent">
+                  <ArrowUpRight size={17} />
+                  <span>
+                    {t('Отправлено')}
+                    <strong>{bytes(totals.tx)}</strong>
+                  </span>
+                </div>
+              </div>
+              <TrafficTrend data={traffic.data || []} />
+            </>
+          )}
+        </section>
         <section className="surface">
           <div className="section-head">
             <div>
@@ -131,119 +163,55 @@ export default function Overview() {
             </div>
           )}
         </section>
-        <section className="surface">
+        <section className="surface overview-connections">
           <div className="section-head">
             <div>
-              <h2>{t('Передача данных')}</h2>
-              <p>{t('Последние 7 дней · UTC')}</p>
+              <h2>{t('Последние подключения')}</h2>
+              <p>{t('По времени последнего рукопожатия VPN')}</p>
             </div>
+            <Link className="text-link" to="/users">
+              {t('Пользователи ')}
+              <ArrowUpRight size={15} />
+            </Link>
           </div>
-          {traffic.error ? (
-            <ErrorNotice message={traffic.error} />
+          {users.data?.some((u) => u.last_connected_at) ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('Пользователь')}</th>
+                    <th>{t('Состояние')}</th>
+                    <th>{t('Последняя активность')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...(users.data || [])]
+                    .filter((u) => u.last_connected_at)
+                    .sort((a, b) =>
+                      (b.last_connected_at || '').localeCompare(a.last_connected_at || ''),
+                    )
+                    .slice(0, 5)
+                    .map((u) => (
+                      <tr key={u.id}>
+                        <td className="font-medium">{u.username}</td>
+                        <td>
+                          <Badge tone={u.online ? 'success' : 'neutral'}>
+                            {u.online ? t('В сети') : t('Не в сети')}
+                          </Badge>
+                        </td>
+                        <td>{date(u.last_connected_at)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <>
-              <div className="traffic-totals">
-                <div className="traffic-received">
-                  <ArrowDownLeft size={17} />
-                  <span>
-                    {t('Получено')}
-                    <strong>{bytes(totals.rx)}</strong>
-                  </span>
-                </div>
-                <div className="traffic-sent">
-                  <ArrowUpRight size={17} />
-                  <span>
-                    {t('Отправлено')}
-                    <strong>{bytes(totals.tx)}</strong>
-                  </span>
-                </div>
-              </div>
-              <div className="mini-chart" aria-label={t('Общий трафик по дням')}>
-                {(traffic.data || []).map((t) => (
-                  <div
-                    className="chart-column"
-                    key={t.day}
-                    title={t.day + ' · ' + bytes(t.received_bytes + t.sent_bytes)}
-                  >
-                    <div className="chart-track">
-                      <div
-                        style={{
-                          height:
-                            Math.max(
-                              2,
-                              ((t.received_bytes + t.sent_bytes) /
-                                Math.max(
-                                  ...(traffic.data || []).map(
-                                    (d) => d.received_bytes + d.sent_bytes,
-                                  ),
-                                  1,
-                                )) *
-                                100,
-                            ) + '%',
-                        }}
-                      />
-                    </div>
-                    <span>{t.day.slice(8)}</span>
-                  </div>
-                ))}
-              </div>
-              {!traffic.data?.length && (
-                <p className="muted text-sm px-6 pb-6">
-                  {t('История появится после первых отчётов нод.')}
-                </p>
-              )}
-            </>
+            <div className="quiet-empty">
+              {t('Подключения появятся, когда пользователи начнут пользоваться VPN.')}
+            </div>
           )}
         </section>
       </div>
-      <section className="surface mt-6">
-        <div className="section-head">
-          <div>
-            <h2>{t('Последние подключения')}</h2>
-            <p>{t('По времени последнего рукопожатия VPN')}</p>
-          </div>
-          <Link className="text-link" to="/users">
-            {t('Пользователи ')}
-            <ArrowUpRight size={15} />
-          </Link>
-        </div>
-        {users.data?.some((u) => u.last_connected_at) ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('Пользователь')}</th>
-                  <th>{t('Состояние')}</th>
-                  <th>{t('Последняя активность')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...(users.data || [])]
-                  .filter((u) => u.last_connected_at)
-                  .sort((a, b) =>
-                    (b.last_connected_at || '').localeCompare(a.last_connected_at || ''),
-                  )
-                  .slice(0, 5)
-                  .map((u) => (
-                    <tr key={u.id}>
-                      <td className="font-medium">{u.username}</td>
-                      <td>
-                        <Badge tone={u.online ? 'success' : 'neutral'}>
-                          {u.online ? t('В сети') : t('Не в сети')}
-                        </Badge>
-                      </td>
-                      <td>{date(u.last_connected_at)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="quiet-empty">
-            {t('Подключения появятся, когда пользователи начнут пользоваться VPN.')}
-          </div>
-        )}
-      </section>
     </>
   )
 }

@@ -8,11 +8,15 @@ export function Select({
   options,
   onChange,
   labelledBy,
+  ariaLabel,
+  disabled,
 }: {
   value: string
   options: Option[]
   onChange: (value: string) => void
-  labelledBy: string
+  labelledBy?: string
+  ariaLabel?: string
+  disabled?: boolean
 }) {
   const id = useId()
   const root = useRef<HTMLDivElement>(null)
@@ -54,6 +58,8 @@ export function Select({
         type="button"
         role="combobox"
         className="select-trigger"
+        disabled={disabled}
+        aria-label={ariaLabel}
         aria-labelledby={labelledBy}
         aria-expanded={open}
         aria-controls={id}
@@ -86,7 +92,13 @@ export function Select({
         <ChevronDown size={15} className={open ? 'select-chevron is-open' : 'select-chevron'} />
       </button>
       {open && (
-        <ul id={id} role="listbox" aria-labelledby={labelledBy} className="select-menu">
+        <ul
+          id={id}
+          role="listbox"
+          aria-label={ariaLabel}
+          aria-labelledby={labelledBy}
+          className="select-menu"
+        >
           {options.map((option, index) => (
             <li
               key={option.value}
@@ -106,5 +118,33 @@ export function Select({
         </ul>
       )}
     </div>
+  )
+}
+
+export function FormSelect({
+  name,
+  defaultValue,
+  options,
+  label,
+  disabled,
+}: {
+  name: string
+  defaultValue: string
+  options: Option[]
+  label: string
+  disabled?: boolean
+}) {
+  const [value, setValue] = useState(defaultValue)
+  return (
+    <>
+      <input type="hidden" name={name} value={value} disabled={disabled} />
+      <Select
+        value={value}
+        onChange={setValue}
+        options={options}
+        ariaLabel={label}
+        disabled={disabled}
+      />
+    </>
   )
 }

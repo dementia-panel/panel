@@ -1,3 +1,5 @@
+import { TrafficTrend } from '../components/TrafficTrend'
+import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { Download, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
@@ -19,7 +21,6 @@ export default function TrafficPage() {
   const data = r.data || []
   const rx = data.reduce((sum, t) => sum + t.received_bytes, 0)
   const tx = data.reduce((sum, t) => sum + t.sent_bytes, 0)
-  const max = Math.max(1, ...data.map((t) => t.received_bytes + t.sent_bytes))
   function exportCSV() {
     const blob = new Blob(
       [
@@ -52,35 +53,39 @@ export default function TrafficPage() {
       <section className="surface">
         <div className="toolbar">
           <div className="filter-group">
-            <select aria-label={t('Период')} value={days} onChange={(e) => setDays(e.target.value)}>
-              {[7, 30, 90, 366].map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                  {t(' дней')}
-                </option>
-              ))}
-            </select>
-            <select aria-label={t('Нода')} value={node} onChange={(e) => setNode(e.target.value)}>
-              <option value="">{t('Все ноды')}</option>
-              {nodes.data?.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.name}
-                  {n.retired_at ? t(' (удалена)') : ''}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label={t('Пользователь')}
+            <Select
+              ariaLabel={t('Период')}
+              value={days}
+              onChange={setDays}
+              options={[7, 30, 90, 366].map((value) => ({
+                value: String(value),
+                label: value + t(' дней'),
+              }))}
+            />
+            <Select
+              ariaLabel={t('Нода')}
+              value={node}
+              onChange={setNode}
+              options={[
+                { value: '', label: t('Все ноды') },
+                ...(nodes.data || []).map((item) => ({
+                  value: item.id,
+                  label: item.name + (item.retired_at ? t(' (удалена)') : ''),
+                })),
+              ]}
+            />
+            <Select
+              ariaLabel={t('Пользователь')}
               value={user}
-              onChange={(e) => setUser(e.target.value)}
-            >
-              <option value="">{t('Все пользователи')}</option>
-              {users.data?.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.username}
-                </option>
-              ))}
-            </select>
+              onChange={setUser}
+              options={[
+                { value: '', label: t('Все пользователи') },
+                ...(users.data || []).map((item) => ({
+                  value: item.id,
+                  label: item.username,
+                })),
+              ]}
+            />
           </div>
         </div>
         {(r.error || nodes.error || users.error) && (
@@ -126,48 +131,7 @@ export default function TrafficPage() {
                 </span>
               </div>
             </div>
-            <div
-              className="traffic-chart"
-              role="img"
-              aria-label={t(
-                'Столбчатый график входящего и исходящего трафика по дням. Точные значения в таблице ниже.',
-              )}
-            >
-              <div className="chart-scale">{bytes(max)}</div>
-              <div className="chart-bars">
-                {data.map((t) => (
-                  <div
-                    className="chart-column"
-                    key={t.day}
-                    title={t.day.slice(0, 10) + ': ' + bytes(t.received_bytes + t.sent_bytes)}
-                  >
-                    <div className="chart-track">
-                      <div
-                        className="stacked-bar"
-                        style={{
-                          height:
-                            Math.max(1, ((t.received_bytes + t.sent_bytes) / max) * 100) + '%',
-                        }}
-                      >
-                        <span style={{ flex: t.received_bytes || 0.001 }} />
-                        <span style={{ flex: t.sent_bytes || 0.001 }} />
-                      </div>
-                    </div>
-                    {data.length <= 31 && <span>{t.day.slice(8, 10)}</span>}
-                  </div>
-                ))}
-              </div>
-              <div className="chart-legend">
-                <span>
-                  <i />
-                  {t('Получено')}
-                </span>
-                <span>
-                  <i />
-                  {t('Отправлено')}
-                </span>
-              </div>
-            </div>
+            <TrafficTrend data={data} />
             <div className="table-wrap">
               <table>
                 <thead>

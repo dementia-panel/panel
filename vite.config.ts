@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
             https: { cert: readFileSync(env.DEV_TLS_CERT), key: readFileSync(env.DEV_TLS_KEY) },
           }
         : {}),
-      proxy: { '/api': proxy, '/healthz': proxy, '/readyz': proxy, '/s/': proxy },
+      proxy: { '/api': proxy, '/healthz': proxy, '/readyz': proxy, '^/s/[^/]+/.+': proxy },
     },
   }
 })

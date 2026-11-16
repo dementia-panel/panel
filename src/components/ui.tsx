@@ -137,11 +137,13 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  className = '',
 }: {
   title: string
   children: ReactNode
   onClose: () => void
   wide?: boolean
+  className?: string
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
@@ -164,7 +166,7 @@ export function Modal({
     <dialog
       ref={ref}
       aria-labelledby={id}
-      className={'modal ' + (wide ? 'modal-wide' : '')}
+      className={['modal', wide ? 'modal-wide' : '', className].filter(Boolean).join(' ')}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           const r = e.currentTarget.getBoundingClientRect()
