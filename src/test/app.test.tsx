@@ -110,6 +110,7 @@ beforeEach(() => {
       }
       if (path === '/api/admin/subscription-plans') return respond(createdPlans)
       if (path === '/api/admin/subscriptions') return respond(createdSubscriptions)
+      if (path === '/api/admin/subscriptions/sub-1/link') return respond({ url: 'https://example.test/s/existing-subscription' })
       if (path === '/api/admin/subscriptions/sub-1/nodes/node-1/profile')
         return respond({ conf: '[Interface]', key: 'vpn://existing-key' })
       if (path === '/api/admin/api-tokens' && method === 'POST')
@@ -169,7 +170,7 @@ test('creates a subscription as a server list without a user or expiration', asy
   })
 })
 
-test('opens already issued profiles and renders both QR codes without issuing new keys', async () => {
+test('opens issued profiles and switches between QR applications without issuing new keys', async () => {
   createdUsers = [{ id: 'user-1', username: 'boris', enabled: true }]
   createdSubscriptions = [
     { id: 'sub-1', user_id: 'user-1', name: 'Личная', enabled: true, node_ids: ['node-1'] },
@@ -184,6 +185,10 @@ test('opens already issued profiles and renders both QR codes without issuing ne
   await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
   await user.click(screen.getByRole('button', { name: 'Показать QR-коды' }))
   for (const name of ['QR-код AmneziaVPN', 'QR-код AmneziaWG']) {
+    if (name === 'QR-код AmneziaWG') {
+      expect(screen.queryByRole('img', { name })).toBeNull()
+      await user.click(screen.getByRole('button', { name: 'AmneziaWG' }))
+    }
     expect((await screen.findByRole('img', { name })).getAttribute('src')).toMatch(
       /^data:image\/png/,
     )
@@ -487,6 +492,7 @@ test('opens the user card, saves subscription expiration and can pause access', 
       expires_at: null,
       traffic_used_bytes: 0,
       traffic_limit_bytes: null,
+      node_ids: ['node-1'],
     },
   ]
   window.history.replaceState({}, '', '/users')
@@ -494,6 +500,14 @@ test('opens the user card, saves subscription expiration and can pause access', 
   await user.click(await screen.findByRole('button', { name: 'Открыть пользователя boris' }))
   await screen.findByRole('heading', { name: 'Карточка пользователя' })
   await screen.findByRole('switch', { name: 'Подписка включена' })
+  await screen.findByDisplayValue('https://example.test/s/existing-subscription')
+  expect(screen.getByRole('button', { name: 'Скачать .conf' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Скачать .vpn' })).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Скопировать' }))
+  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('https://example.test/s/existing-subscription'))
+  await user.click(screen.getByRole('button', { name: 'Скопировать vpn://' }))
+  await waitFor(async () => expect(await navigator.clipboard.readText()).toBe('vpn://existing-key'))
+  expect(calls.filter((call) => call.method !== 'GET')).toEqual([])
   await user.click(screen.getByRole('checkbox', { name: 'Без ограничения срока' }))
   const expiry = screen.getByLabelText('Действует до')
   await user.type(expiry, '2027-01-31')

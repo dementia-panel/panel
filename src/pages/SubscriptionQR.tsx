@@ -24,7 +24,7 @@ export async function fetchProfile(path: string, signal?: AbortSignal) {
 
 type Mode = 'link' | 'vpn' | 'wg'
 
-function QRFrames({ frames, label }: { frames: string[]; label: string }) {
+export function QRFrames({ frames, label }: { frames: string[]; label: string }) {
   const [frame, setFrame] = useState(0)
   const [paused, setPaused] = useState(false)
   const count = frames.length

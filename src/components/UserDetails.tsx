@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { bytes, api, date, useResource } from '../lib/api'
 import { t } from '../lib/i18n'
 import type { Subscription, SubscriptionPlan, User } from '../lib/types'
+import { UserConnectionAccess } from './UserConnectionAccess'
 import { Select } from './Select'
 import { ActionForm, Badge, ErrorNotice, Field, Loading, Modal, useFeedback } from './ui'
 
@@ -170,6 +171,9 @@ function DetailsForm({
           )}
         </fieldset>
       </section>
+      {access && selectedPlan === user.subscription_plan_id && (
+        <UserConnectionAccess access={access} />
+      )}
       <dl className="details user-detail-facts">
         <dt>ID</dt>
         <dd className="mono">{user.id}</dd>

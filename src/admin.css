@@ -1075,3 +1075,27 @@
 .subscription-plan-name {
   margin: -8px 0 20px;
 }
+
+.user-connection-access {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+  display: grid;
+  gap: 16px;
+}
+.user-connection-heading,
+.user-connection-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.user-connection-heading { justify-content: space-between; }
+.user-connection-heading h3 { font-size: 15px; font-weight: 600; }
+.user-connection-heading > span { font-size: 12px; }
+.user-connection-link .copy-value { flex: 1; min-width: 0; }
+.user-connection-access > .btn { justify-self: start; }
+.user-connection-access > p { font-size: 13px; line-height: 1.6; }
+.user-connection-server { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.profile-qr { margin-top: 16px; }
+.profile-qr .subscription-qr-modes { display: flex; gap: 8px; }
+.profile-qr .subscription-qr-modes button[aria-pressed='true'] { background: #eee; color: #171717; }

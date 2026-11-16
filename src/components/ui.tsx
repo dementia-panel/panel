@@ -254,6 +254,7 @@ export function CopyValue({
     <div className="copy-value">
       <input value={value} readOnly aria-label={inputLabel} onFocus={(e) => e.target.select()} />
       <Button
+        type="button"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(value)

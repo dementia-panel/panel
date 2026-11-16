@@ -1,3 +1,5 @@
+import { QRFrames } from './SubscriptionQR'
+import { amneziaFrames } from '../lib/amneziaQr'
 import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
@@ -36,7 +38,8 @@ export function ProfileActions({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [manualKey, setManualKey] = useState('')
-  const [qr, setQR] = useState<{ vpn: string; awg: string } | null>(null)
+  const [qr, setQR] = useState<{ vpn: string[]; awg: string[] } | null>(null)
+  const [qrMode, setQRMode] = useState<'vpn' | 'wg'>('vpn')
   const feedback = useFeedback()
 
   async function exportProfile(action: 'conf' | 'vpn' | 'copy' | 'qr') {
@@ -60,8 +63,11 @@ export function ProfileActions({
         }
       } else if (action === 'qr') {
         const [{ conf, key }, { toDataURL }] = await Promise.all([profile, import('qrcode')])
-        const options = { width: 440, margin: 4, errorCorrectionLevel: 'M' as const }
-        const [vpn, awg] = await Promise.all([toDataURL(key, options), toDataURL(conf, options)])
+        const options = { width: 540, margin: 4, errorCorrectionLevel: 'L' as const }
+        const [vpn, awg] = await Promise.all([
+          Promise.all(amneziaFrames(key).map((frame) => toDataURL(frame, options))),
+          Promise.all([toDataURL(conf, options)]),
+        ])
         setQR({ vpn, awg })
       } else {
         const { conf, key } = await profile
@@ -103,15 +109,20 @@ export function ProfileActions({
         </Button>
       </div>
       {qr && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <figure>
-            <figcaption>AmneziaVPN</figcaption>
-            <img src={qr.vpn} alt={t('QR-код AmneziaVPN')} />
-          </figure>
-          <figure>
-            <figcaption>AmneziaWG</figcaption>
-            <img src={qr.awg} alt={t('QR-код AmneziaWG')} />
-          </figure>
+        <div className="subscription-qr profile-qr">
+          <div className="subscription-qr-modes" role="group" aria-label={t('Приложение для сканирования')}>
+            {(['vpn', 'wg'] as const).map((mode) => (
+              <Button type="button" key={mode} aria-pressed={qrMode === mode} onClick={() => setQRMode(mode)}>
+                {mode === 'vpn' ? 'AmneziaVPN' : 'AmneziaWG'}
+              </Button>
+            ))}
+          </div>
+          <QRFrames key={qrMode} frames={qrMode === 'vpn' ? qr.vpn : qr.awg} label={t(qrMode === 'vpn' ? 'QR-код AmneziaVPN' : 'QR-код AmneziaWG')} />
+          <p className="subscription-qr-help">
+            {qrMode === 'vpn'
+              ? t('Наведите камеру в AmneziaVPN и дождитесь, пока приложение считает все кадры.')
+              : t('Отсканируйте этот код в AmneziaWG, чтобы добавить выбранный сервер.')}
+          </p>
         </div>
       )}
       {manualKey && <CopyValue value={manualKey} inputLabel={t('Ключ vpn://')} />}

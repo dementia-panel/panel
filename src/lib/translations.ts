@@ -1,5 +1,9 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Уже выданные ключи': 'Previously issued keys',
+  'Создать новую ссылку': 'Create a new link',
+  'Ссылка выпущена до обновления и не сохранена. Можно создать новую ссылку без замены VPN-ключей.': 'This link was issued before the update and was not saved. You can create a new link while preserving the VPN keys.',
+
   'Не удалось открыть страницу': 'Unable to open this page',
   'Обновите приложение, чтобы восстановить работу.': 'Reload the application to restore access.',
   'Обновить страницу': 'Reload page',
