@@ -222,6 +222,7 @@ export default function PublicSubscription() {
   }, [attempt, base])
 
   const device = manifest?.devices?.find((item) => item.id === deviceID) ?? manifest?.devices?.[0]
+  const used = !!(device?.online || device?.last_connected_at)
   const profileBase = device ? base + '/devices/' + encodeURIComponent(device.id) : base
   const available = manifest?.locations.filter((location) => location.available) ?? []
   const selected =
@@ -229,6 +230,10 @@ export default function PublicSubscription() {
     available[0] ??
     manifest?.locations[0]
   const branding = manifest?.branding ?? { name: 'dementia', logo: '' }
+  useEffect(() => {
+    if (used || !manifest) setQR(null)
+  }, [used, manifest])
+
   useEffect(() => {
     document.title = manifest ? manifest.name + ' · ' + branding.name : t('Подключение к VPN')
   }, [manifest, branding.name, language])
@@ -270,242 +275,258 @@ export default function PublicSubscription() {
         </div>
       </header>
       <main className="subscription-site-main">
-        <section className="subscription-hero">
-          <span className={'subscription-status' + (manifest ? ' is-available' : '')}>
-            <i />
-            {manifest
-              ? t('Подписка активна')
-              : failure
-                ? t('Подписка недоступна')
-                : t('Загрузка подписки…')}
-          </span>
-          <h1>
-            {manifest?.expires_at
-              ? t('до') +
-                ' ' +
-                new Date(manifest.expires_at).toLocaleDateString(getLocale(), {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })
-              : manifest?.name || t('Подключение к VPN')}
-          </h1>
-          {manifest?.expires_at && <p className="subscription-plan-name">{manifest.name}</p>}
-          {manifest && (
-            <dl className="subscription-facts">
-              <div>
-                <dt>
-                  <ShieldCheck size={17} />
-                  {t('Срок действия')}
-                </dt>
-                <dd>
-                  {manifest.expires_at ? date(manifest.expires_at) : t('Без ограничения срока')}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  <Server size={17} />
-                  {t('Серверы подключения')}
-                </dt>
-                <dd>
-                  {available.length} / {manifest.locations.length} {t('доступно')}
-                </dd>
-              </div>
-            </dl>
-          )}
-          {failure && (
-            <p>
-              {failure === 'unavailable'
-                ? t('Проверьте ссылку или запросите новую у администратора.')
-                : t('Не удалось загрузить настройки подключения.')}
-            </p>
-          )}
-          {failure === 'network' && (
-            <button
-              className="subscription-button"
-              onClick={() => setAttempt((value) => value + 1)}
-            >
-              {t('Повторить')}
-            </button>
-          )}
-        </section>
-        {manifest && (
+        {used ? (
+          <section className="subscription-used-notice" role="status">
+            {t('Данный ключ уже использован')}
+          </section>
+        ) : (
           <>
-            <section className="subscription-install">
-              {!!manifest?.devices?.length && (
-                <div className="subscription-device-picker">
-                  <span id="subscription-device-label">{t('Устройство для подключения')}</span>
-                  <Select
-                    labelledBy="subscription-device-label"
-                    value={device?.id ?? ''}
-                    onChange={setDeviceID}
-                    options={manifest.devices.map((item) => ({
-                      value: item.id,
-                      label: item.name === 'Main device' ? t('Основное устройство') : item.name,
-                    }))}
-                  />
-                </div>
+            <section className="subscription-hero">
+              <span className={'subscription-status' + (manifest ? ' is-available' : '')}>
+                <i />
+                {manifest
+                  ? t('Подписка активна')
+                  : failure
+                    ? t('Подписка недоступна')
+                    : t('Загрузка подписки…')}
+              </span>
+              <h1>
+                {manifest?.expires_at
+                  ? t('до') +
+                    ' ' +
+                    new Date(manifest.expires_at).toLocaleDateString(getLocale(), {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : manifest?.name || t('Подключение к VPN')}
+              </h1>
+              {manifest?.expires_at && <p className="subscription-plan-name">{manifest.name}</p>}
+              {manifest && (
+                <dl className="subscription-facts">
+                  <div>
+                    <dt>
+                      <ShieldCheck size={17} />
+                      {t('Срок действия')}
+                    </dt>
+                    <dd>
+                      {manifest.expires_at ? date(manifest.expires_at) : t('Без ограничения срока')}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>
+                      <Server size={17} />
+                      {t('Серверы подключения')}
+                    </dt>
+                    <dd>
+                      {available.length} / {manifest.locations.length} {t('доступно')}
+                    </dd>
+                  </div>
+                </dl>
               )}
-              {device && (
-                <div
-                  className={'subscription-device-status' + (device.online ? ' is-online' : '')}
-                  role="status"
-                >
-                  <strong>
-                    {device.name === 'Main device' ? t('Основное устройство') : device.name}
-                  </strong>
-                  <p>
-                    {device.online
-                      ? t('По этому ключу уже подключено устройство.')
-                      : t('Устройство сейчас не подключено.')}
-                  </p>
-                  {device.last_connected_at && (
-                    <small>
-                      {t('Последнее подключение')} · {date(device.last_connected_at)}
-                    </small>
-                  )}
-                </div>
+              {failure && (
+                <p>
+                  {failure === 'unavailable'
+                    ? t('Проверьте ссылку или запросите новую у администратора.')
+                    : t('Не удалось загрузить настройки подключения.')}
+                </p>
               )}
-              <div className="subscription-section-title">
-                <h2>{t('Настройка подключения')}</h2>
-                <span>{t('Выберите приложение')}</span>
-              </div>
-              <div className="subscription-install-layout">
-                <div
-                  className="subscription-apps"
-                  role="group"
-                  aria-label={t('Приложение для подключения')}
+              {failure === 'network' && (
+                <button
+                  className="subscription-button"
+                  onClick={() => setAttempt((value) => value + 1)}
                 >
-                  <button type="button" aria-pressed={app === 'vpn'} onClick={() => setApp('vpn')}>
-                    <span
-                      className="subscription-app-icon subscription-app-icon-vpn"
-                      aria-hidden="true"
-                    />
-                    <span>
-                      <strong>AmneziaVPN</strong>
-                      <small>{t('Ключ и конфиг .vpn')}</small>
-                    </span>
-                    {app === 'vpn' && <Check size={17} />}
-                  </button>
-                  <button type="button" aria-pressed={app === 'wg'} onClick={() => setApp('wg')}>
-                    <span
-                      className="subscription-app-icon subscription-app-icon-wg"
-                      aria-hidden="true"
-                    />
-                    <span>
-                      <strong>AmneziaWG</strong>
-                      <small>{t('Конфиг .conf')}</small>
-                    </span>
-                    {app === 'wg' && <Check size={17} />}
-                  </button>
-                </div>
-                <ol className="subscription-steps">
-                  <li>
-                    <span className="subscription-step-number">1</span>
-                    <div>
-                      <h3>{t('Установка приложения')}</h3>
-                      <p>
-                        {t(
-                          'Установите приложение для вашего устройства. Затем вернитесь на эту страницу.',
-                        )}
-                      </p>
-                      <a
-                        className="subscription-button"
-                        href={applicationDownloadURL(app)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ArrowDownToLine size={17} />
-                        {t('Скачать приложение')}
-                        <ExternalLink size={14} />
-                      </a>
+                  {t('Повторить')}
+                </button>
+              )}
+            </section>
+            {manifest && (
+              <>
+                <section className="subscription-install">
+                  {!!manifest?.devices?.length && (
+                    <div className="subscription-device-picker">
+                      <span id="subscription-device-label">{t('Устройство для подключения')}</span>
+                      <Select
+                        labelledBy="subscription-device-label"
+                        value={device?.id ?? ''}
+                        onChange={setDeviceID}
+                        options={manifest.devices.map((item) => ({
+                          value: item.id,
+                          label: item.name === 'Main device' ? t('Основное устройство') : item.name,
+                        }))}
+                      />
                     </div>
-                  </li>
-                  <li>
-                    <span className="subscription-step-number">2</span>
-                    <div>
-                      <h3>{t('Добавление сервера')}</h3>
+                  )}
+                  {device && (
+                    <div
+                      className={'subscription-device-status' + (device.online ? ' is-online' : '')}
+                      role="status"
+                    >
+                      <strong>
+                        {device.name === 'Main device' ? t('Основное устройство') : device.name}
+                      </strong>
                       <p>
-                        {app === 'vpn'
-                          ? t(
-                              'Скопируйте ключ и вставьте его в AmneziaVPN. Также можно импортировать файл .vpn или отсканировать QR-код.',
-                            )
-                          : t(
-                              'Скачайте файл .conf и импортируйте его в AmneziaWG. Для подключения с другого устройства используйте QR-код.',
-                            )}
+                        {device.online
+                          ? t('По этому ключу уже подключено устройство.')
+                          : t('Устройство сейчас не подключено.')}
                       </p>
-                      {selected ? (
-                        <>
-                          <div className="subscription-choose-server">
-                            <span id={serverLabel}>{t('Сервер')}</span>
-                            <Select
-                              labelledBy={serverLabel}
-                              value={selected.id}
-                              onChange={setSelectedId}
-                              options={manifest.locations.map((location) => ({
-                                value: location.id,
-                                label:
-                                  location.name +
-                                  (location.available ? '' : ' · ' + t('Недоступен')),
-                              }))}
-                            />
-                          </div>
-                          <ServerCard
-                            key={profileBase + selected.id + app}
-                            location={selected}
-                            base={profileBase}
-                            app={app}
-                            openQR={() => setQR({ server: selected.id })}
-                          />
-                        </>
-                      ) : (
-                        <p>{t('В подписке пока нет серверов.')}</p>
+                      {device.last_connected_at && (
+                        <small>
+                          {t('Последнее подключение')} · {date(device.last_connected_at)}
+                        </small>
                       )}
                     </div>
-                  </li>
-                  <li>
-                    <span className="subscription-step-number">
-                      <Check size={18} />
-                    </span>
-                    <div>
-                      <h3>{t('Подключение и использование')}</h3>
-                      <p>
-                        {t(
-                          'Включите VPN в приложении и разрешите добавление VPN-конфигурации, если устройство запросит подтверждение.',
-                        )}
-                      </p>
+                  )}
+                  <div className="subscription-section-title">
+                    <h2>{t('Настройка подключения')}</h2>
+                    <span>{t('Выберите приложение')}</span>
+                  </div>
+                  <div className="subscription-install-layout">
+                    <div
+                      className="subscription-apps"
+                      role="group"
+                      aria-label={t('Приложение для подключения')}
+                    >
+                      <button
+                        type="button"
+                        aria-pressed={app === 'vpn'}
+                        onClick={() => setApp('vpn')}
+                      >
+                        <span
+                          className="subscription-app-icon subscription-app-icon-vpn"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          <strong>AmneziaVPN</strong>
+                          <small>{t('Ключ и конфиг .vpn')}</small>
+                        </span>
+                        {app === 'vpn' && <Check size={17} />}
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={app === 'wg'}
+                        onClick={() => setApp('wg')}
+                      >
+                        <span
+                          className="subscription-app-icon subscription-app-icon-wg"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          <strong>AmneziaWG</strong>
+                          <small>{t('Конфиг .conf')}</small>
+                        </span>
+                        {app === 'wg' && <Check size={17} />}
+                      </button>
                     </div>
-                  </li>
-                </ol>
-              </div>
-            </section>
-            <section className="subscription-link-section">
-              <div className="subscription-section-title">
-                <h2>{t('Ссылка на подписку')}</h2>
-                <button className="subscription-button" onClick={() => setQR({})}>
-                  <QrCode size={16} />
-                  {t('QR подписки')}
-                </button>
-              </div>
-              <CopyValue
-                value={
-                  new URL(
-                    device ? base + '?device_id=' + encodeURIComponent(device.id) : base,
-                    window.location.origin,
-                  ).href
-                }
-                inputLabel={t('Ссылка на подписку')}
-              />
-              <p>
-                {t(
-                  'Сохраните эту ссылку, чтобы вернуться к своим серверам и настройкам подключения.',
-                )}
-              </p>
-            </section>
+                    <ol className="subscription-steps">
+                      <li>
+                        <span className="subscription-step-number">1</span>
+                        <div>
+                          <h3>{t('Установка приложения')}</h3>
+                          <p>
+                            {t(
+                              'Установите приложение для вашего устройства. Затем вернитесь на эту страницу.',
+                            )}
+                          </p>
+                          <a
+                            className="subscription-button"
+                            href={applicationDownloadURL(app)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ArrowDownToLine size={17} />
+                            {t('Скачать приложение')}
+                            <ExternalLink size={14} />
+                          </a>
+                        </div>
+                      </li>
+                      <li>
+                        <span className="subscription-step-number">2</span>
+                        <div>
+                          <h3>{t('Добавление сервера')}</h3>
+                          <p>
+                            {app === 'vpn'
+                              ? t(
+                                  'Скопируйте ключ и вставьте его в AmneziaVPN. Также можно импортировать файл .vpn или отсканировать QR-код.',
+                                )
+                              : t(
+                                  'Скачайте файл .conf и импортируйте его в AmneziaWG. Для подключения с другого устройства используйте QR-код.',
+                                )}
+                          </p>
+                          {selected ? (
+                            <>
+                              <div className="subscription-choose-server">
+                                <span id={serverLabel}>{t('Сервер')}</span>
+                                <Select
+                                  labelledBy={serverLabel}
+                                  value={selected.id}
+                                  onChange={setSelectedId}
+                                  options={manifest.locations.map((location) => ({
+                                    value: location.id,
+                                    label:
+                                      location.name +
+                                      (location.available ? '' : ' · ' + t('Недоступен')),
+                                  }))}
+                                />
+                              </div>
+                              <ServerCard
+                                key={profileBase + selected.id + app}
+                                location={selected}
+                                base={profileBase}
+                                app={app}
+                                openQR={() => setQR({ server: selected.id })}
+                              />
+                            </>
+                          ) : (
+                            <p>{t('В подписке пока нет серверов.')}</p>
+                          )}
+                        </div>
+                      </li>
+                      <li>
+                        <span className="subscription-step-number">
+                          <Check size={18} />
+                        </span>
+                        <div>
+                          <h3>{t('Подключение и использование')}</h3>
+                          <p>
+                            {t(
+                              'Включите VPN в приложении и разрешите добавление VPN-конфигурации, если устройство запросит подтверждение.',
+                            )}
+                          </p>
+                        </div>
+                      </li>
+                    </ol>
+                  </div>
+                </section>
+                <section className="subscription-link-section">
+                  <div className="subscription-section-title">
+                    <h2>{t('Ссылка на подписку')}</h2>
+                    <button className="subscription-button" onClick={() => setQR({})}>
+                      <QrCode size={16} />
+                      {t('QR подписки')}
+                    </button>
+                  </div>
+                  <CopyValue
+                    value={
+                      new URL(
+                        device ? base + '?device_id=' + encodeURIComponent(device.id) : base,
+                        window.location.origin,
+                      ).href
+                    }
+                    inputLabel={t('Ссылка на подписку')}
+                  />
+                  <p>
+                    {t(
+                      'Сохраните эту ссылку, чтобы вернуться к своим серверам и настройкам подключения.',
+                    )}
+                  </p>
+                </section>
+              </>
+            )}
           </>
         )}
       </main>
-      {qr && (
+      {qr && manifest && !used && (
         <SubscriptionQR
           base={profileBase}
           locations={available}

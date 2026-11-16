@@ -700,7 +700,7 @@ test('switches subscription devices without keeping another device key visible',
         return Response.json({
           name: 'Device subscription',
           devices: [
-            { id: 'phone', name: 'iPhone', online: true },
+            { id: 'phone', name: 'iPhone', online: false },
             { id: 'laptop', name: 'Laptop' },
           ],
           locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
@@ -714,7 +714,6 @@ test('switches subscription devices without keeping another device key visible',
   window.history.replaceState({}, '', path)
   render(<App />)
   await screen.findByRole('heading', { name: 'Device subscription' })
-  expect(screen.getByText('По этому ключу уже подключено устройство.')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
   expect(
     (await screen.findByRole<HTMLTextAreaElement>('textbox', { name: 'Ключ vpn://' })).value,
@@ -749,4 +748,84 @@ test('opens the selected app directly in the mobile platform store', () => {
     'https://play.google.com/store/apps/details?id=org.amnezia.awg',
   )
   expect(applicationDownloadURL('vpn', 'Windows', 0)).toBe('https://amnezia.org/downloads')
+})
+
+test.each([
+  { online: true, last_connected_at: null },
+  { online: false, last_connected_at: '2026-11-16T10:00:00Z' },
+])('hides all subscription content for a used device: %j', async (status) => {
+  signedIn = false
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      Response.json({
+        name: 'Private subscription',
+        devices: [{ id: 'phone', name: 'iPhone', ...status }],
+        locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
+      }),
+    ),
+  )
+  window.history.replaceState({}, '', '/s/used-device')
+  render(<App />)
+  await screen.findByText('Данный ключ уже использован')
+  expect(document.querySelector('.subscription-site-main')?.textContent).toBe(
+    'Данный ключ уже использован',
+  )
+  expect(screen.queryByRole('textbox')).toBeNull()
+  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(screen.queryByRole('link')).toBeNull()
+  expect(screen.queryByText('Подписка активна')).toBeNull()
+  expect(document.querySelector('.subscription-qr-modal')).toBeNull()
+  vi.mocked(localStorage.getItem).mockReturnValue('en')
+  fireEvent.click(screen.getByRole('button', { name: 'EN' }))
+  await screen.findByText('This key has already been used')
+})
+
+test('removes a revealed VPN key when polling reports the first connection', async () => {
+  signedIn = false
+  let refresh: (() => void) | undefined
+  const interval = vi.spyOn(window, 'setInterval').mockImplementation((handler, delay) => {
+    if (delay === 15000) refresh = handler as () => void
+    return 123 as unknown as ReturnType<typeof window.setInterval>
+  })
+  let connected = false
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url.endsWith('/manifest')
+        ? Response.json({
+            name: 'Device subscription',
+            devices: [
+              {
+                id: 'phone',
+                name: 'iPhone',
+                online: connected,
+                last_connected_at: connected ? '2026-11-16T10:00:00Z' : null,
+              },
+            ],
+            locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
+          })
+        : new Response('vpn://private-key'),
+    ),
+  )
+  window.history.replaceState({}, '', '/s/device-polling')
+  try {
+    render(<App />)
+    await screen.findByText('Device subscription')
+    fireEvent.click(screen.getByRole('button', { name: 'Показать ключ' }))
+    await screen.findByDisplayValue('vpn://private-key')
+    fireEvent.click(screen.getByRole('button', { name: 'QR подписки' }))
+    await screen.findByRole('dialog')
+    connected = true
+    await act(async () => {
+      refresh?.()
+    })
+    await screen.findByText('Данный ключ уже использован')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByDisplayValue('vpn://private-key')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'QR подписки' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'AmneziaVPN .vpn' })).toBeNull()
+  } finally {
+    interval.mockRestore()
+  }
 })

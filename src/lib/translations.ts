@@ -1,5 +1,6 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Данный ключ уже использован': 'This key has already been used',
   'Ссылка подписки устройства': 'Device subscription link',
   'По этому ключу уже подключено устройство.': 'A device is already connected using this key.',
   'Устройство сейчас не подключено.': 'This device is currently offline.',
