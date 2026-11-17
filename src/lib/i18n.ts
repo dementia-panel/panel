@@ -2,24 +2,31 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { english } from './translations'
 
 export type Language = 'en' | 'ru'
-const storageKey = 'dementia.language'
+type Scope = 'admin' | 'subscription'
+const keys = { admin: 'dementia.language', subscription: 'dementia.subscription.language' }
 const changeEvent = 'dementia:language'
 let currentLanguage: Language = 'en'
+let subscriptionDefault: Language = 'en'
+const memory: Partial<Record<Scope, Language>> = {}
 let memoryOnly = false
 
-function snapshot(): Language {
+function snapshot(scope: Scope): Language {
+  let value: string | null | undefined = memory[scope]
   if (!memoryOnly) {
     try {
-      currentLanguage = window.localStorage.getItem(storageKey) === 'ru' ? 'ru' : 'en'
+      value = window.localStorage.getItem(keys[scope])
     } catch {
       memoryOnly = true
     }
   }
+  currentLanguage =
+    value === 'en' || value === 'ru' ? value : scope === 'subscription' ? subscriptionDefault : 'en'
   return currentLanguage
 }
 function subscribe(listener: () => void) {
   const storage = (event: StorageEvent) => {
-    if (event.key === storageKey || event.key === null) listener()
+    if (event.key === keys.admin || event.key === keys.subscription || event.key === null)
+      listener()
   }
   window.addEventListener(changeEvent, listener)
   window.addEventListener('storage', storage)
@@ -28,13 +35,19 @@ function subscribe(listener: () => void) {
     window.removeEventListener('storage', storage)
   }
 }
-export function setLanguage(language: Language) {
+export function setLanguage(language: Language, scope: Scope = 'admin') {
   currentLanguage = language
+  memory[scope] = language
   try {
-    window.localStorage.setItem(storageKey, language)
+    window.localStorage.setItem(keys[scope], language)
   } catch {
     memoryOnly = true
   }
+  window.dispatchEvent(new Event(changeEvent))
+}
+export function setSubscriptionDefault(language: Language) {
+  subscriptionDefault = language
+  snapshot('subscription')
   window.dispatchEvent(new Event(changeEvent))
 }
 export function getLocale() {
@@ -46,10 +59,14 @@ export function t(message: string): string {
   const trimmed = message.trim()
   return Object.hasOwn(english, trimmed) ? message.replace(trimmed, english[trimmed]) : message
 }
-export function useLanguage() {
-  const language = useSyncExternalStore(subscribe, snapshot, () => 'en' as const)
+export function useLanguage(scope: Scope = 'admin') {
+  const language = useSyncExternalStore(
+    subscribe,
+    () => snapshot(scope),
+    () => 'en' as const,
+  )
   useEffect(() => {
     document.documentElement.lang = language
   }, [language])
-  return { language, setLanguage }
+  return { language, setLanguage: (value: Language) => setLanguage(value, scope) }
 }

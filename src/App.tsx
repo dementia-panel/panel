@@ -55,7 +55,7 @@ function Protected() {
 function ApplicationRoutes() {
   const subscription = useMatch('/s/:token')
   const isPublic = Boolean(subscription)
-  const { language } = useLanguage()
+  const { language } = useLanguage(isPublic ? 'subscription' : 'admin')
   useEffect(() => {
     if (!isPublic) document.title = 'dementia · ' + t('Управление сетью')
   }, [isPublic, language])

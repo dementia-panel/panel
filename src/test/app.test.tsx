@@ -27,7 +27,9 @@ beforeEach(() => {
   createdPlans = []
   vi.stubGlobal('localStorage', {
     setItem: vi.fn(),
-    getItem: vi.fn((key: string) => (key === 'dementia.language' ? 'ru' : null)),
+    getItem: vi.fn((key: string) =>
+      key === 'dementia.language' || key === 'dementia.subscription.language' ? 'ru' : null,
+    ),
     removeItem: vi.fn(),
     clear: vi.fn(),
   })
@@ -482,7 +484,7 @@ test('updates the subscription page branding from settings', async () => {
   expect(calls).toContainEqual({
     path: '/api/admin/settings/subscription-branding',
     method: 'PUT',
-    body: { name: 'Northern Relay', logo: '' },
+    body: { name: 'Northern Relay', logo: '', default_language: 'en' },
   })
 })
 
@@ -1011,3 +1013,47 @@ test('switches device links even when every server on the current device was use
     '/s/b/devices/laptop/nodes/node-1.vpn',
   )
 })
+
+test('saves the default subscription language in settings', async () => {
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/settings')
+  render(<App />)
+  await user.click(
+    await screen.findByRole('combobox', { name: 'Язык страницы подписки по умолчанию' }),
+  )
+  await user.click(screen.getByRole('option', { name: 'Русский' }))
+  const section = screen.getByText('Оформление страницы подписки').closest('section')!
+  await user.click(within(section).getByRole('button', { name: 'Сохранить' }))
+  await screen.findByText('Оформление страницы подписки сохранено.')
+  expect(
+    calls.find((c) => c.path === '/api/admin/settings/subscription-branding' && c.method === 'PUT')
+      ?.body.default_language,
+  ).toBe('ru')
+})
+test.each([null, 'en'])(
+  'applies configured language without overriding visitor preference: %s',
+  async (preference) => {
+    const values = new Map<string, string>([['dementia.language', 'en']])
+    if (preference) values.set('dementia.subscription.language', preference)
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          name: 'Europe',
+          devices: [],
+          locations: [],
+          branding: { name: 'Test', logo: '', default_language: 'ru' },
+        }),
+      ),
+    )
+    window.history.replaceState({}, '', '/s/lang')
+    render(<App />)
+    await screen.findByText(preference ? 'Subscription active' : 'Подписка активна')
+    expect(values.get('dementia.language')).toBe('en')
+    if (!preference) expect(values.has('dementia.subscription.language')).toBe(false)
+  },
+)

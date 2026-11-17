@@ -14,7 +14,7 @@ import { CopyValue } from '../components/ui'
 import { Select } from '../components/Select'
 import { SubscriptionBrand } from '../components/SubscriptionBrand'
 import { date } from '../lib/api'
-import { t, useLanguage, getLocale } from '../lib/i18n'
+import { t, useLanguage, setSubscriptionDefault, getLocale } from '../lib/i18n'
 import type { SubscriptionBranding } from '../lib/types'
 import { fetchProfile, profilePath, SubscriptionQR, type Location } from './SubscriptionQR'
 import './PublicSubscription.css'
@@ -180,7 +180,7 @@ export default function PublicSubscription() {
   const [switching, setSwitching] = useState(false)
   const [switchError, setSwitchError] = useState('')
   const { token = '' } = useParams()
-  const { language, setLanguage } = useLanguage()
+  const { language, setLanguage } = useLanguage('subscription')
   const [manifest, setManifest] = useState<Manifest | null>(null)
   const [failure, setFailure] = useState<'unavailable' | 'network' | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -217,6 +217,7 @@ export default function PublicSubscription() {
         }
         const value: Manifest = await result.json()
         if (!controller.signal.aborted) {
+          setSubscriptionDefault(value.branding?.default_language ?? 'en')
           setManifest(value)
           setFailure(null)
         }

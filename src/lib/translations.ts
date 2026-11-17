@@ -1,5 +1,6 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Язык страницы подписки по умолчанию': 'Default subscription page language',
   'Не удалось переключить устройство. Повторите попытку.':
     'Could not switch device. Please try again.',
   'Ключ уже использован': 'Key already used',

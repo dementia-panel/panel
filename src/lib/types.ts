@@ -84,6 +84,7 @@ export interface SubscriptionPlan {
 }
 
 export interface SubscriptionBranding {
+  default_language?: 'en' | 'ru'
   name: string
   logo: string
 }
