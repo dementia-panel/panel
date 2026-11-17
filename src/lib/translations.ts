@@ -1,5 +1,21 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'SSH-ключ сервера изменился. Если сервер был переустановлен, подтвердите новый ключ при повторной установке.':
+    'The SSH host key has changed. If the server was reinstalled, confirm the new key when retrying installation.',
+  'Не удалось войти по SSH. Проверьте логин и пароль.':
+    'SSH authentication failed. Check the login and password.',
+  'Не удалось установить SSH-соединение. Проверьте настройки SSH на сервере.':
+    'The SSH handshake failed. Check the SSH server configuration.',
+
+  'Удаление ноды': 'Remove node',
+  'Способ удаления': 'Removal method',
+  'Удалить из системы': 'Remove from panel',
+  'Удалить и очистить сервер': 'Remove and clean server',
+  'Нода удалена из системы': 'Node removed from panel',
+  'Нода будет удалена из панели и подписок. Контейнеры и файлы на сервере останутся.':
+    'The node will be removed from the panel and subscriptions. Containers and files will remain on the server.',
+  'Сервер переустановлен: принять новый SSH-ключ': 'Server reinstalled: accept a new SSH host key',
+
   'Этот ключ уже активирован на устройстве.': 'This key has already been activated on a device.',
   'Данный ключ уже использован': 'This key has already been used',
   'Ссылка подписки устройства': 'Device subscription link',

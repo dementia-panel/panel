@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -26,6 +27,7 @@ export default function NodesPage() {
     mode: 'create' | 'edit' | 'endpoint' | 'remove'
     node?: Node
   } | null>(params.has('create') ? { mode: 'create' } : null)
+  const [cleanup, setCleanup] = useState(false)
   const [checking, setChecking] = useState<string | null>(null)
   const f = useFeedback()
   const nodes = (r.data || []).filter(
@@ -164,7 +166,7 @@ export default function NodesPage() {
               {(n.status === 'installing' || n.operation_stage === 'removing') && (
                 <NodeOperation stage={n.operation_stage} />
               )}
-              {n.error && <div className="notice notice-error break-all">{n.error}</div>}
+              {n.error && <div className="notice notice-error break-all">{nodeError(n.error)}</div>}
               <div className="node-actions">
                 {n.status === 'failed' && n.operation_stage !== 'removing' && (
                   <Button onClick={() => setModal({ mode: 'create', node: n })}>
@@ -245,7 +247,10 @@ export default function NodesPage() {
                 <button
                   className="danger-text"
                   disabled={n.status === 'installing' || n.operation_stage === 'removing'}
-                  onClick={() => setModal({ mode: 'remove', node: n })}
+                  onClick={() => {
+                    setCleanup(false)
+                    setModal({ mode: 'remove', node: n })
+                  }}
                 >
                   <Trash2 size={13} />
                   {t('Удалить')}
@@ -261,7 +266,7 @@ export default function NodesPage() {
             modal.mode === 'create'
               ? t('Подключение сервера')
               : modal.mode === 'remove'
-                ? t('Удаление ноды с VPS')
+                ? t('Удаление ноды')
                 : modal.mode === 'endpoint'
                   ? t('Публичный адрес VPN')
                   : t('Настройки ноды')
@@ -274,7 +279,9 @@ export default function NodesPage() {
               modal.mode === 'create'
                 ? t('Установить ноду')
                 : modal.mode === 'remove'
-                  ? t('Удалить ноду')
+                  ? cleanup
+                    ? t('Удалить и очистить сервер')
+                    : t('Удалить из системы')
                   : t('Сохранить')
             }
             onSubmit={async (form) => {
@@ -287,14 +294,17 @@ export default function NodesPage() {
                   password: String(form.get('password')),
                   ssh_port: Number(value('ssh_port')),
                   vpn_port: Number(value('vpn_port')),
+                  ...(form.get('reset_host_key') === 'on' ? { reset_host_key: true } : {}),
                 })
               else if (modal.mode === 'remove')
                 await action(
                   modal.node!,
                   '',
                   {
-                    login: value('login'),
-                    password: String(form.get('password')),
+                    cleanup,
+                    ...(cleanup
+                      ? { login: value('login'), password: String(form.get('password')) }
+                      : {}),
                   },
                   'DELETE',
                 )
@@ -319,24 +329,46 @@ export default function NodesPage() {
                 modal.mode === 'create'
                   ? t('Установка запущена. Состояние обновится автоматически.')
                   : modal.mode === 'remove'
-                    ? t('Очистка VPS запущена.')
+                    ? cleanup
+                      ? t('Очистка VPS запущена.')
+                      : t('Нода удалена из системы')
                     : t('Изменения сохранены'),
               )
             }}
           >
             {modal.mode === 'remove' ? (
               <>
+                <div className="field">
+                  <span id="node-removal-mode">{t('Способ удаления')}</span>
+                  <Select
+                    labelledBy="node-removal-mode"
+                    value={cleanup ? 'cleanup' : 'local'}
+                    onChange={(value) => setCleanup(value === 'cleanup')}
+                    options={[
+                      { value: 'local', label: t('Удалить из системы') },
+                      { value: 'cleanup', label: t('Удалить и очистить сервер') },
+                    ]}
+                  />
+                </div>
                 <p className="muted">
-                  {t(
-                    'Контейнеры ноды остановятся, установленные файлы и ключи будут удалены с VPS.',
-                  )}
+                  {cleanup
+                    ? t(
+                        'Контейнеры ноды остановятся, установленные файлы и ключи будут удалены с VPS.',
+                      )
+                    : t(
+                        'Нода будет удалена из панели и подписок. Контейнеры и файлы на сервере останутся.',
+                      )}
                 </p>
-                <Field label={t('SSH-пользователь')}>
-                  <input name="login" defaultValue="root" required />
-                </Field>
-                <Field label={t('SSH-пароль')}>
-                  <input name="password" type="password" autoComplete="off" required />
-                </Field>
+                {cleanup && (
+                  <>
+                    <Field label={t('SSH-пользователь')}>
+                      <input name="login" defaultValue="root" required />
+                    </Field>
+                    <Field label={t('SSH-пароль')}>
+                      <input name="password" type="password" autoComplete="off" required />
+                    </Field>
+                  </>
+                )}
               </>
             ) : modal.mode !== 'endpoint' ? (
               <Field label={t('Название сервера')}>
@@ -414,6 +446,12 @@ export default function NodesPage() {
                 <Field label={t('SSH-пароль')}>
                   <input name="password" type="password" required autoComplete="new-password" />
                 </Field>
+                {modal.node?.status === 'failed' && (
+                  <label className="check-field">
+                    <input name="reset_host_key" type="checkbox" />
+                    {t('Сервер переустановлен: принять новый SSH-ключ')}
+                  </label>
+                )}
                 <div className="notice">
                   {t(
                     'Установщик определит ОС, установит Docker и развернёт AmneziaWG. Процесс может занять до 15 минут.',
@@ -451,4 +489,17 @@ function NodeOperation({ stage }: { stage?: string }) {
       />
     </div>
   )
+}
+
+function nodeError(error: string): string {
+  const messages: Record<string, string> = {
+    'SSH server key verification failed': t(
+      'SSH-ключ сервера изменился. Если сервер был переустановлен, подтвердите новый ключ при повторной установке.',
+    ),
+    'SSH authentication failed': t('Не удалось войти по SSH. Проверьте логин и пароль.'),
+    'SSH handshake failed': t(
+      'Не удалось установить SSH-соединение. Проверьте настройки SSH на сервере.',
+    ),
+  }
+  return messages[error] ?? error
 }

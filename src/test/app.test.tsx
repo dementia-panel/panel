@@ -6,6 +6,8 @@ import { TrafficTrend } from '../components/TrafficTrend'
 import { App } from '../App'
 import { useResource } from '../lib/api'
 
+let nodeStatus = 'ready'
+let nodeRemoved = false
 let signedIn = true
 let calls: { path: string; method: string; body: Record<string, unknown> }[]
 let createdUsers: Record<string, unknown>[]
@@ -15,6 +17,8 @@ let deviceDefault: number | null
 let createdSubscriptions: Record<string, unknown>[]
 beforeEach(() => {
   signedIn = true
+  nodeStatus = 'ready'
+  nodeRemoved = false
   calls = []
   createdDevices = []
   deviceDefault = 3
@@ -136,20 +140,28 @@ beforeEach(() => {
         return respond({ ...body, id: 'node-2' }, 202)
       if (path === '/api/admin/nodes/node-1' && method === 'PATCH')
         return respond({ enabled: body.enabled })
+      if (path === '/api/admin/nodes/node-1' && method === 'DELETE') {
+        nodeRemoved = true
+        return respond(undefined, 204)
+      }
       if (path === '/api/admin/nodes')
-        return respond([
-          {
-            id: 'node-1',
-            name: 'Frankfurt',
-            ip: '192.0.2.10',
-            vpn_port: 51820,
-            status: 'ready',
-            enabled: true,
-            online: true,
-            revision: 1,
-            applied_revision: 1,
-          },
-        ])
+        return respond(
+          nodeRemoved
+            ? []
+            : [
+                {
+                  id: 'node-1',
+                  name: 'Frankfurt',
+                  ip: '192.0.2.10',
+                  vpn_port: 51820,
+                  status: nodeStatus,
+                  enabled: true,
+                  online: true,
+                  revision: 1,
+                  applied_revision: 1,
+                },
+              ],
+        )
       if (path === '/api/admin/subscription-plans' && method === 'POST') {
         const plan = { ...body, id: 'plan-1' }
         createdPlans.push(plan)
@@ -829,4 +841,69 @@ test('removes a revealed VPN key when polling reports the first connection', asy
   } finally {
     interval.mockRestore()
   }
+})
+
+test('removes a failed node from the panel without requesting SSH credentials', async () => {
+  nodeStatus = 'failed'
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  await screen.findByText('Ошибка установки')
+  await user.click(screen.getByRole('button', { name: 'Удалить' }))
+  await screen.findByRole('heading', { name: 'Удаление ноды' })
+  expect(screen.queryByLabelText('SSH-пароль')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Удалить из системы' }))
+  await screen.findByText('Нода удалена из системы')
+  expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ cleanup: false })
+  expect(screen.queryByText('Frankfurt')).toBeNull()
+})
+test('requires SSH credentials only for remote cleanup and drops them when switching back', async () => {
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: 'Удалить' }))
+  await user.click(screen.getByRole('combobox', { name: 'Способ удаления' }))
+  await user.click(screen.getByRole('option', { name: 'Удалить и очистить сервер' }))
+  expect((screen.getByLabelText('SSH-пароль') as HTMLInputElement).required).toBe(true)
+  await user.type(screen.getByLabelText('SSH-пароль'), 'test-only-password')
+  await user.click(screen.getByRole('combobox', { name: 'Способ удаления' }))
+  await user.click(screen.getByRole('option', { name: 'Удалить из системы' }))
+  expect(screen.queryByLabelText('SSH-пароль')).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Удалить из системы' }))
+  await screen.findByText('Нода удалена из системы')
+  expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ cleanup: false })
+})
+test('submits remote cleanup with explicitly selected SSH credentials', async () => {
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: 'Удалить' }))
+  await user.click(screen.getByRole('combobox', { name: 'Способ удаления' }))
+  await user.click(screen.getByRole('option', { name: 'Удалить и очистить сервер' }))
+  await user.type(screen.getByLabelText('SSH-пароль'), 'test-only-password')
+  await user.click(screen.getByRole('button', { name: 'Удалить и очистить сервер' }))
+  await screen.findByText('Очистка VPS запущена.')
+  expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({
+    cleanup: true,
+    login: 'root',
+    password: 'test-only-password',
+  })
+})
+test('can explicitly accept a changed SSH host key when retrying a failed installation', async () => {
+  nodeStatus = 'failed'
+  const user = userEvent.setup()
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  await user.click(await screen.findByRole('button', { name: 'Повторить установку' }))
+  const reset = screen.getByRole('checkbox', {
+    name: 'Сервер переустановлен: принять новый SSH-ключ',
+  })
+  expect((reset as HTMLInputElement).checked).toBe(false)
+  await user.click(reset)
+  await user.type(screen.getByLabelText('SSH-пароль'), 'test-only-password')
+  await user.click(screen.getByRole('button', { name: 'Установить ноду' }))
+  await screen.findByText('Установка запущена. Состояние обновится автоматически.')
+  expect(
+    calls.find((c) => c.method === 'POST' && c.path === '/api/admin/nodes')?.body.reset_host_key,
+  ).toBe(true)
 })
