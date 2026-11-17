@@ -20,7 +20,13 @@ import { fetchProfile, profilePath, SubscriptionQR, type Location } from './Subs
 import './PublicSubscription.css'
 
 type Manifest = {
-  devices?: { id: string; name: string; online?: boolean; last_connected_at?: string | null }[]
+  devices?: {
+    id: string
+    name: string
+    online?: boolean
+    last_connected_at?: string | null
+    servers?: { node_id: string; last_connected_at: string | null }[]
+  }[]
   name: string
   expires_at?: string | null
   locations: Location[]
@@ -99,7 +105,12 @@ function ServerCard({
 
   return (
     <article className="subscription-server">
-      {location.available ? (
+      {location.used ? (
+        <span className="subscription-status" role="status">
+          <i />
+          {t('Данный ключ уже использован')}
+        </span>
+      ) : location.available ? (
         <>
           <div className="subscription-server-actions">
             {app === 'vpn' && (
@@ -222,17 +233,24 @@ export default function PublicSubscription() {
   }, [attempt, base])
 
   const device = manifest?.devices?.find((item) => item.id === deviceID) ?? manifest?.devices?.[0]
-  const used = !!(device?.online || device?.last_connected_at)
+  const locations = (manifest?.locations ?? []).map((location) => ({
+    ...location,
+    used: !!device?.servers?.find((server) => server.node_id === location.id)?.last_connected_at,
+  }))
+  const used = locations.length > 0 && locations.every((location) => location.used)
   const profileBase = device ? base + '/devices/' + encodeURIComponent(device.id) : base
-  const available = manifest?.locations.filter((location) => location.available) ?? []
+  const available = locations.filter((location) => location.available && !location.used)
   const selected =
-    manifest?.locations.find((location) => location.id === selectedId) ??
-    available[0] ??
-    manifest?.locations[0]
+    locations.find((location) => location.id === selectedId) ?? available[0] ?? locations[0]
   const branding = manifest?.branding ?? { name: 'dementia', logo: '' }
   useEffect(() => {
-    if (used || !manifest) setQR(null)
-  }, [used, manifest])
+    if (
+      used ||
+      !manifest ||
+      (qr?.server && !available.some((location) => location.id === qr.server))
+    )
+      setQR(null)
+  }, [used, manifest, qr, available])
 
   useEffect(() => {
     document.title = manifest ? manifest.name + ' · ' + branding.name : t('Подключение к VPN')
@@ -372,7 +390,7 @@ export default function PublicSubscription() {
                       </strong>
                       <p>
                         {device.online
-                          ? t('По этому ключу уже подключено устройство.')
+                          ? t('Устройство подключено')
                           : t('Устройство сейчас не подключено.')}
                       </p>
                       {device.last_connected_at && (
@@ -466,11 +484,15 @@ export default function PublicSubscription() {
                                   labelledBy={serverLabel}
                                   value={selected.id}
                                   onChange={setSelectedId}
-                                  options={manifest.locations.map((location) => ({
+                                  options={locations.map((location) => ({
                                     value: location.id,
                                     label:
                                       location.name +
-                                      (location.available ? '' : ' · ' + t('Недоступен')),
+                                      (location.used
+                                        ? ' · ' + t('Ключ уже использован')
+                                        : location.available
+                                          ? ''
+                                          : ' · ' + t('Недоступен')),
                                   }))}
                                 />
                               </div>

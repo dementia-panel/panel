@@ -5,7 +5,7 @@ import { Modal } from '../components/ui'
 import { amneziaFrames } from '../lib/amneziaQr'
 import { t } from '../lib/i18n'
 
-export type Location = { id: string; name: string; available: boolean }
+export type Location = { id: string; name: string; available: boolean; used?: boolean }
 
 export function profilePath(base: string, id: string) {
   return base + '/nodes/' + encodeURIComponent(id)
@@ -71,10 +71,12 @@ export function SubscriptionQR({
 }) {
   const serverLabel = useId()
   const [mode, setMode] = useState<Mode>(initialMode ?? (initialServer ? 'vpn' : 'link'))
-  const [server, setServer] = useState(initialServer ?? locations[0]?.id ?? '')
+  const [selectedServer, setServer] = useState(initialServer ?? locations[0]?.id ?? '')
   const [result, setResult] = useState<{ request: string; images: string[] } | null>(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const server =
+    locations.find((location) => location.id === selectedServer)?.id ?? locations[0]?.id ?? ''
   const root = mode === 'link' ? base : profilePath(base, server)
   const request = mode + ':' + root + ':' + attempt
 
@@ -90,6 +92,7 @@ export function SubscriptionQR({
               .href,
           ]
         } else {
+          if (!server) throw new Error('No available server')
           const profile = await fetchProfile(
             root + (mode === 'vpn' ? '.key' : '.conf'),
             controller.signal,

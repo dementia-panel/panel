@@ -772,7 +772,14 @@ test.each([
     vi.fn(async () =>
       Response.json({
         name: 'Private subscription',
-        devices: [{ id: 'phone', name: 'iPhone', ...status }],
+        devices: [
+          {
+            id: 'phone',
+            name: 'iPhone',
+            ...status,
+            servers: [{ node_id: 'node-1', last_connected_at: '2026-11-16T10:00:00Z' }],
+          },
+        ],
         locations: [{ id: 'node-1', name: 'Frankfurt', available: true }],
       }),
     ),
@@ -813,6 +820,12 @@ test('removes a revealed VPN key when polling reports the first connection', asy
                 id: 'phone',
                 name: 'iPhone',
                 online: connected,
+                servers: [
+                  {
+                    node_id: 'node-1',
+                    last_connected_at: connected ? '2026-11-16T10:00:00Z' : null,
+                  },
+                ],
                 last_connected_at: connected ? '2026-11-16T10:00:00Z' : null,
               },
             ],
@@ -906,4 +919,51 @@ test('can explicitly accept a changed SSH host key when retrying a failed instal
   expect(
     calls.find((c) => c.method === 'POST' && c.path === '/api/admin/nodes')?.body.reset_host_key,
   ).toBe(true)
+})
+
+test('keeps unused servers accessible when another server key was already used', async () => {
+  signedIn = false
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) =>
+      url.endsWith('/manifest')
+        ? Response.json({
+            name: 'Europe',
+            devices: [
+              {
+                id: 'phone',
+                name: 'iPhone',
+                online: true,
+                last_connected_at: '2026-11-16T10:00:00Z',
+                servers: [
+                  { node_id: 'node-a', last_connected_at: '2026-11-16T10:00:00Z' },
+                  { node_id: 'node-b', last_connected_at: null },
+                ],
+              },
+            ],
+            locations: [
+              { id: 'node-a', name: 'Amsterdam', available: true },
+              { id: 'node-b', name: 'Berlin', available: true },
+            ],
+          })
+        : new Response('vpn://berlin'),
+    ),
+  )
+  window.history.replaceState({}, '', '/s/multi')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByText('Europe')
+  expect(screen.queryByText('Данный ключ уже использован')).toBeNull()
+  expect(screen.getByRole('link', { name: 'AmneziaVPN .vpn' }).getAttribute('href')).toBe(
+    '/s/multi/devices/phone/nodes/node-b.vpn',
+  )
+  await user.click(screen.getByRole('combobox', { name: 'Сервер' }))
+  await user.click(screen.getByRole('option', { name: 'Amsterdam · Ключ уже использован' }))
+  await screen.findByText('Данный ключ уже использован')
+  expect(screen.queryByRole('button', { name: 'Показать ключ' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'AmneziaVPN .vpn' })).toBeNull()
+  await user.click(screen.getByRole('combobox', { name: 'Сервер' }))
+  await user.click(screen.getByRole('option', { name: 'Berlin' }))
+  await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
+  await screen.findByDisplayValue('vpn://berlin')
 })
