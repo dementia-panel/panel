@@ -47,7 +47,6 @@ function messages(): Record<string, string> {
 
 let queue: Promise<unknown> = Promise.resolve()
 
-// One credentialed request at a time prevents competing refresh-token rotations.
 export function api<T = void>(
   path: string,
   method = 'GET',
@@ -107,7 +106,7 @@ export function useResource<T>(path: string, interval = 0) {
   const inFlight = useRef<{ generation: number; promise: Promise<void> } | null>(null)
   const refresh = useCallback(async () => {
     const current = generation.current
-    // A manual reload after a mutation must wait for an older poll, then fetch again.
+
     const previous = inFlight.current
     if (previous?.generation === current) await previous.promise
     if (current !== generation.current) return

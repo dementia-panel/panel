@@ -1,5 +1,19 @@
-// Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Переименовать ': 'Rename ',
+
+  'Переименовать API-токен': 'Rename API token',
+  'Название токена сохранено': 'Token name saved',
+
+  'Уведомления Telegram': 'Telegram notifications',
+  'Выберите события для отправки в настроенный Telegram-чат.':
+    'Choose which events are sent to the configured Telegram chat.',
+  'События нод': 'Node events',
+  'События пользователей': 'User events',
+  'Вход администратора': 'Administrator sign-in',
+  'Изменения API-ключей': 'API key changes',
+  'События подписок': 'Subscription events',
+  'Настройки уведомлений сохранены': 'Notification preferences saved',
+
   'Язык страницы подписки по умолчанию': 'Default subscription page language',
   'Не удалось переключить устройство. Повторите попытку.':
     'Could not switch device. Please try again.',

@@ -6,7 +6,7 @@
   --panel-secondary: #b1b1b8;
   --line: #29292e;
 }
-/* Shared visual language of the subscription page across the control panel. */
+
 .app-shell,
 .auth-layout {
   --line: #29292e;
@@ -1204,7 +1204,6 @@
   margin-bottom: 20px;
 }
 
-/* Keep both user tabs inside the same padded, independently scrolling body. */
 .modal.user-details-modal[open] {
   display: flex;
   flex-direction: column;
@@ -1237,7 +1236,6 @@
   }
 }
 
-/* Page containers own the spacing between independent sections. */
 .app-shell .page-sections {
   display: grid;
   gap: 24px;

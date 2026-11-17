@@ -1,5 +1,3 @@
-// Qt QDataStream framing used by the AmneziaVPN scanner. The payload in a
-// vpn:// link is already in Qt's compressed representation.
 export function amneziaFrames(link: string): string[] {
   const encoded = /^vpn:\/\/([A-Za-z0-9_-]+)$/.exec(link.trim())?.[1]
   if (!encoded) throw new Error('Invalid AmneziaVPN profile')

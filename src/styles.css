@@ -1518,7 +1518,6 @@ input[type='checkbox'] {
   box-shadow: 0 0 0 3px #00000025;
 }
 
-/* Dementia: graphite surfaces, restrained light and clear hierarchy. */
 :root {
   color-scheme: dark;
   color: #ededf0;
@@ -2010,7 +2009,6 @@ input[type='checkbox'] {
   background: #0009;
 }
 
-/* Focused sign-in, following the supplied reference. */
 .auth-layout {
   position: fixed;
   inset: 0;
@@ -2425,7 +2423,6 @@ input[type='checkbox'] {
   }
 }
 
-/* Dementia's rounded custom lettering and compact signal mark. */
 .brand-lockup {
   display: flex;
   flex-direction: column;
@@ -2457,7 +2454,6 @@ input[type='checkbox'] {
   height: 32px;
 }
 
-/* A single search border, including keyboard focus, independent of generic input styles. */
 .search {
   transition: border-color 0.18s ease;
 }
@@ -2485,7 +2481,6 @@ input[type='checkbox'] {
   color: #b7b7b7;
 }
 
-/* Neutral interface accents with semantic colors for health and errors. */
 :root {
   --status-success: #75dfaf;
   --status-danger: #f49b9e;
@@ -2613,7 +2608,6 @@ input[type='checkbox'] {
   color: #f0b3b5;
 }
 
-/* Shared scrollbar styling for the page, dialogs, lists, and horizontal tables. */
 :root {
   --scrollbar-thumb: #565656;
   --scrollbar-hover: #767676;
@@ -2724,7 +2718,6 @@ input[type='checkbox'] {
   color: #828282;
 }
 .settings-language {
-  /* Let the language menu extend beyond the card above the next section. */
   overflow: visible;
   position: relative;
   z-index: 1;
@@ -2751,7 +2744,6 @@ input[type='checkbox'] {
   }
 }
 
-/* Use the component surface for focus instead of a browser outline. */
 *:focus {
   outline: none;
 }

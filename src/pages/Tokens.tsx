@@ -1,6 +1,6 @@
 import { t } from '../lib/i18n'
 import { useState } from 'react'
-import { KeyRound, Plus, Trash2 } from 'lucide-react'
+import { KeyRound, Plus, Trash2, Pencil } from 'lucide-react'
 import { api, date, useResource } from '../lib/api'
 import type { APIToken } from '../lib/types'
 import {
@@ -19,6 +19,7 @@ export default function TokensPage() {
   const r = useResource<APIToken[]>('/api-tokens')
   const [create, setCreate] = useState(false)
   const [secret, setSecret] = useState('')
+  const [editing, setEditing] = useState<APIToken | null>(null)
   const f = useFeedback()
   return (
     <>
@@ -73,6 +74,13 @@ export default function TokensPage() {
                       <td>
                         <Button
                           variant="ghost"
+                          aria-label={t('Переименовать ') + token.name}
+                          onClick={() => setEditing(token)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
                           aria-label={t('Удалить ') + token.name}
                           onClick={() =>
                             f.confirm(
@@ -97,6 +105,25 @@ export default function TokensPage() {
           )}
         </section>
       </div>
+      {editing && (
+        <Modal title={t('Переименовать API-токен')} onClose={() => setEditing(null)}>
+          <ActionForm
+            onCancel={() => setEditing(null)}
+            onSubmit={async (form) => {
+              await api('/api-tokens/' + editing.id, 'PATCH', {
+                name: String(form.get('name')).trim(),
+              })
+              setEditing(null)
+              await r.refresh()
+              f.notify(t('Название токена сохранено'))
+            }}
+          >
+            <Field label={t('Название интеграции')}>
+              <input name="name" required maxLength={128} defaultValue={editing.name} />
+            </Field>
+          </ActionForm>
+        </Modal>
+      )}
       {create && (
         <Modal title={t('Новый API-токен')} onClose={() => setCreate(false)}>
           <ActionForm

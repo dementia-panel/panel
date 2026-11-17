@@ -1,3 +1,4 @@
+import { TelegramSettings } from '../components/TelegramSettings'
 import { t, useLanguage } from '../lib/i18n'
 import { Radio, Webhook, Terminal } from 'lucide-react'
 import { Badge, CopyValue, ErrorNotice, Heading } from '../components/ui'
@@ -56,6 +57,7 @@ export default function SettingsPage() {
         </section>
         <DeviceSettings />
         <SubscriptionBrandingSettings />
+        <TelegramSettings />
         <section className="surface">
           <div className="section-head">
             <div>
