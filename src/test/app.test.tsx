@@ -768,9 +768,10 @@ test.each([
   window.history.replaceState({}, '', '/s/used-device')
   render(<App />)
   await screen.findByText('Данный ключ уже использован')
-  expect(document.querySelector('.subscription-site-main')?.textContent).toBe(
-    'Данный ключ уже использован',
-  )
+  expect(screen.getByRole('heading', { name: 'Подключение к VPN' })).toBeTruthy()
+  expect(screen.getByText('Этот ключ уже активирован на устройстве.')).toBeTruthy()
+  expect(document.querySelector('.subscription-site-main')?.children).toHaveLength(1)
+  expect(document.querySelector('.subscription-status.is-available')).toBeNull()
   expect(screen.queryByRole('textbox')).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
   expect(screen.queryByRole('link')).toBeNull()

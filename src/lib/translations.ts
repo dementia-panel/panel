@@ -1,5 +1,6 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Этот ключ уже активирован на устройстве.': 'This key has already been activated on a device.',
   'Данный ключ уже использован': 'This key has already been used',
   'Ссылка подписки устройства': 'Device subscription link',
   'По этому ключу уже подключено устройство.': 'A device is already connected using this key.',
@@ -487,8 +488,7 @@ export const english: Record<string, string> = {
   'Загрузка подписки…': 'Loading subscription…',
   'Выберите сервер и импортируйте профиль в ваше VPN-приложение.':
     'Choose a server and import its profile into your VPN app.',
-  'Проверьте ссылку или запросите новую у администратора.':
-    'Check the link or ask your administrator for a new one.',
+  'Проверьте правильность ссылки.': 'Check that the link is correct.',
   'Не удалось загрузить настройки подключения.': 'Unable to load connection settings.',
   'Серверы подключения': 'VPN servers',
   'Оформление страницы подписки': 'Subscription page branding',

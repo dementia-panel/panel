@@ -276,8 +276,13 @@ export default function PublicSubscription() {
       </header>
       <main className="subscription-site-main">
         {used ? (
-          <section className="subscription-used-notice" role="status">
-            {t('Данный ключ уже использован')}
+          <section className="subscription-hero" role="status">
+            <span className="subscription-status">
+              <i />
+              {t('Данный ключ уже использован')}
+            </span>
+            <h1>{t('Подключение к VPN')}</h1>
+            <p>{t('Этот ключ уже активирован на устройстве.')}</p>
           </section>
         ) : (
           <>
@@ -327,7 +332,7 @@ export default function PublicSubscription() {
               {failure && (
                 <p>
                   {failure === 'unavailable'
-                    ? t('Проверьте ссылку или запросите новую у администратора.')
+                    ? t('Проверьте правильность ссылки.')
                     : t('Не удалось загрузить настройки подключения.')}
                 </p>
               )}
