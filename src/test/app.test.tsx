@@ -36,15 +36,38 @@ beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, options?: RequestInit) => {
-      const path = String(url)
+      const requestURL = new URL(String(url), 'https://panel.example.test')
+      const path = requestURL.pathname
       const method = options?.method || 'GET'
       const body = JSON.parse(String(options?.body || '{}'))
       calls.push({ path, method, body })
-      const respond = (data: unknown, status = 200) =>
-        new Response(status === 204 ? null : JSON.stringify(data), {
+      const respond = (data: unknown, status = 200) => {
+        if (path === '/api/admin/users' && method === 'GET' && Array.isArray(data)) {
+          const query = requestURL.searchParams
+          const search = query.get('search') || ''
+          const status = query.get('status') || 'all'
+          const values = data.filter(
+            (user) =>
+              (String(user.username).toLowerCase().includes(search.toLowerCase()) ||
+                String(user.telegram_id || '').includes(search)) &&
+              (status === 'all' || (status === 'online' ? user.online : !user.enabled)),
+          )
+          const page = Number(query.get('page') || 1),
+            per_page = Number(query.get('per_page') || 25)
+          data = {
+            items: values.slice((page - 1) * per_page, page * per_page),
+            total: values.length,
+            online_total: values.filter((user) => user.online).length,
+            page,
+            per_page,
+            total_pages: Math.ceil(values.length / per_page),
+          }
+        }
+        return new Response(status === 204 ? null : JSON.stringify(data), {
           status,
           headers: { 'Content-Type': 'application/json' },
         })
+      }
       if (path === '/api/auth/setup') return respond({ setup_required: false })
       if (path === '/api/auth/me')
         return signedIn ? respond({ username: 'admin' }) : respond({ error: 'unauthorized' }, 401)
@@ -89,7 +112,7 @@ beforeEach(() => {
           createdDevices = createdDevices.filter((device) => device.id !== id)
         return respond(undefined, 204)
       }
-      if (/^\/api\/admin\/users\/user-1\/devices\/[^/]+\/link\?subscription_id=/.test(path))
+      if (/^\/api\/admin\/users\/user-1\/devices\/[^/]+\/link$/.test(path))
         return respond({ url: 'https://example.test/s/device-' + path.split('/')[6] })
       if (path === '/api/admin/settings/subscription-branding')
         return respond(method === 'PUT' ? body : { name: 'dementia', logo: '' })
@@ -1057,3 +1080,28 @@ test.each([null, 'en'])(
     if (!preference) expect(values.has('dementia.subscription.language')).toBe(false)
   },
 )
+
+test('paginates users and searches across pages instead of filtering only visible rows', async () => {
+  createdUsers = Array.from({ length: 30 }, (_, index) => ({
+    id: 'user-' + index,
+    username: 'person-' + String(index).padStart(2, '0'),
+    telegram_id: 1000 + index,
+    enabled: true,
+    online: false,
+    created_at: '2030-01-01T00:00:00Z',
+    updated_at: '2030-01-01T00:00:00Z',
+    last_connected_at: null,
+  }))
+  window.history.replaceState({}, '', '/users')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('button', { name: 'Открыть пользователя person-00' })
+  expect(screen.queryByRole('button', { name: 'Открыть пользователя person-29' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'Далее' }))
+  await screen.findByRole('button', { name: 'Открыть пользователя person-29' })
+  expect(screen.queryByRole('button', { name: 'Открыть пользователя person-00' })).toBeNull()
+  await user.type(screen.getByRole('textbox', { name: 'Имя или Telegram ID' }), 'person-00')
+  await screen.findByRole('button', { name: 'Открыть пользователя person-00' })
+  expect(screen.queryByRole('button', { name: 'Открыть пользователя person-29' })).toBeNull()
+  expect((screen.getByRole('button', { name: 'Назад' }) as HTMLButtonElement).disabled).toBe(true)
+})

@@ -1,4 +1,8 @@
 export const english: Record<string, string> = {
+  Назад: 'Previous',
+  Далее: 'Next',
+  'Страница ': 'Page ',
+  'Пагинация пользователей': 'User pagination',
   'Переименовать ': 'Rename ',
 
   'Переименовать API-токен': 'Rename API token',

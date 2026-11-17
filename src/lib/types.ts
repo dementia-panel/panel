@@ -98,3 +98,12 @@ export interface UserDevice {
   last_connected_at: string | null
   online: boolean
 }
+
+export type UserPage = {
+  items: User[]
+  total: number
+  online_total: number
+  page: number
+  per_page: number
+  total_pages: number
+}

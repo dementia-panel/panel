@@ -2,13 +2,13 @@ import { t } from '../lib/i18n'
 import { ArrowDownLeft, ArrowUpRight, Network, Plus, Server, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useResource, bytes, date } from '../lib/api'
-import type { Node, User, Subscription, Traffic } from '../lib/types'
+import type { Node, UserPage, Subscription, Traffic } from '../lib/types'
 import { TrafficTrend } from '../components/TrafficTrend'
 import { Badge, Empty, ErrorNotice, Heading, Loading } from '../components/ui'
 
 export default function Overview() {
   const nodes = useResource<Node[]>('/nodes', 15000)
-  const users = useResource<User[]>('/users', 15000)
+  const users = useResource<UserPage>('/users?per_page=5&sort=last_connected_at', 15000)
   const subs = useResource<Subscription[]>('/subscriptions', 15000)
   const traffic = useResource<Traffic[]>('/traffic?days=7', 30000)
   if (nodes.loading || users.loading || subs.loading) return <Loading />
@@ -49,8 +49,8 @@ export default function Overview() {
         <Stat
           label={t('Пользователи')}
           tone="blue"
-          value={String(users.data?.length || 0)}
-          note={(users.data?.filter((u) => u.online).length || 0) + t(' сейчас в сети')}
+          value={String(users.data?.total || 0)}
+          note={(users.data?.online_total || 0) + t(' сейчас в сети')}
           icon={<Users size={19} />}
         />
         <Stat
@@ -174,7 +174,7 @@ export default function Overview() {
               <ArrowUpRight size={15} />
             </Link>
           </div>
-          {users.data?.some((u) => u.last_connected_at) ? (
+          {users.data?.items.some((u) => u.last_connected_at) ? (
             <div className="table-wrap">
               <table>
                 <thead>
@@ -185,7 +185,7 @@ export default function Overview() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...(users.data || [])]
+                  {[...(users.data?.items || [])]
                     .filter((u) => u.last_connected_at)
                     .sort((a, b) =>
                       (b.last_connected_at || '').localeCompare(a.last_connected_at || ''),

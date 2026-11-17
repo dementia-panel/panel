@@ -1,3 +1,4 @@
+import { useAllUsers } from '../lib/users'
 import { QRFrames } from './SubscriptionQR'
 import { amneziaFrames } from '../lib/amneziaQr'
 import { Select } from '../components/Select'
@@ -6,7 +7,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Settings2, Link2, Trash2, KeyRound } from 'lucide-react'
 import { api, bytes, date, errorMessage, useResource } from '../lib/api'
-import type { Subscription, User, Node, SubscriptionPlan } from '../lib/types'
+import type { Subscription, Node, SubscriptionPlan } from '../lib/types'
 import {
   ActionForm,
   Badge,
@@ -159,7 +160,7 @@ export default function SubscriptionsPage() {
 
 function IssuedAccessPage() {
   const r = useResource<Subscription[]>('/subscriptions', 15000)
-  const users = useResource<User[]>('/users')
+  const users = useAllUsers()
   const nodes = useResource<Node[]>('/nodes')
   const [params] = useSearchParams()
   const [search, setSearch] = useState('')

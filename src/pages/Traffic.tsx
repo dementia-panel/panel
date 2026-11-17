@@ -1,17 +1,18 @@
+import { useAllUsers } from '../lib/users'
 import { TrafficTrend } from '../components/TrafficTrend'
 import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { Download, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { bytes, useResource } from '../lib/api'
-import type { Traffic, Node, User } from '../lib/types'
+import type { Traffic, Node } from '../lib/types'
 import { Button, Empty, ErrorNotice, Heading, Loading } from '../components/ui'
 export default function TrafficPage() {
   const [days, setDays] = useState('30')
   const [node, setNode] = useState('')
   const [user, setUser] = useState('')
   const nodes = useResource<Node[]>('/nodes')
-  const users = useResource<User[]>('/users')
+  const users = useAllUsers()
   const query = new URLSearchParams({
     days,
     ...(node ? { node_id: node } : {}),

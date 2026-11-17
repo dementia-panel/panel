@@ -1,11 +1,11 @@
 import { UserDetails } from '../components/UserDetails'
 import { FormSelect } from '../components/Select'
 import { t } from '../lib/i18n'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { api, date, useResource } from '../lib/api'
 import { ProfileActions } from './Subscriptions'
-import type { User, SubscriptionPlan, Node } from '../lib/types'
+import type { User, UserPage, SubscriptionPlan, Node } from '../lib/types'
 import {
   ActionForm,
   Badge,
@@ -22,23 +22,35 @@ import {
 } from '../components/ui'
 
 export default function UsersPage() {
-  const resource = useResource<User[]>('/users', 15000)
   const plans = useResource<SubscriptionPlan[]>('/subscription-plans')
   const nodes = useResource<Node[]>('/nodes')
   const [issued, setIssued] = useState<{ id: string; planId: string; url?: string } | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const params = new URLSearchParams({ page: String(page), per_page: '25', search, status: filter })
+  const resource = useResource<UserPage>('/users?' + params, 15000)
+  useEffect(() => {
+    if (resource.data && page > 1 && page > Math.max(1, resource.data.total_pages))
+      setPage(Math.max(1, resource.data.total_pages))
+  }, [resource.data, page])
   const [edit, setEdit] = useState<User | 'new' | null>(null)
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const feedback = useFeedback()
-  const data = resource.data || []
-  const visible = data.filter(
-    (u) =>
-      (u.username.toLowerCase().includes(search.toLowerCase()) ||
-        String(u.telegram_id || '').includes(search)) &&
-      (filter === 'all' || (filter === 'online' ? u.online : !u.enabled)),
-  )
+  const data = resource.data?.items || []
+  const visible = data
+  const total = resource.data?.total || 0
+  function changeSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+    setSelected([])
+  }
+  function changeFilter(value: string) {
+    setFilter(value)
+    setPage(1)
+    setSelected([])
+  }
   function remove(u: User) {
     feedback.confirm(
       t('Удалить ') + u.username + '?',
@@ -84,14 +96,18 @@ export default function UsersPage() {
       />
       <section className="surface">
         <div className="toolbar">
-          <SearchBox value={search} onChange={setSearch} placeholder={t('Имя или Telegram ID')} />
+          <SearchBox
+            value={search}
+            onChange={changeSearch}
+            placeholder={t('Имя или Telegram ID')}
+          />
           <div className="tabs">
             {[
               ['all', t('Все')],
               ['online', t('В сети')],
               ['disabled', t('Отключены')],
             ].map(([id, title]) => (
-              <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id}>
+              <button key={id} onClick={() => changeFilter(id)} aria-pressed={filter === id}>
                 {title}
               </button>
             ))}
@@ -117,16 +133,20 @@ export default function UsersPage() {
           <Loading />
         ) : !visible.length ? (
           <Empty
-            title={data.length ? t('Пользователи не найдены') : t('Добавьте первого пользователя')}
+            title={
+              search || filter !== 'all'
+                ? t('Пользователи не найдены')
+                : t('Добавьте первого пользователя')
+            }
             description={
-              data.length
+              search || filter !== 'all'
                 ? t('Попробуйте изменить запрос или фильтр.')
                 : t('После создания можно выпустить подписку на один или несколько серверов.')
             }
             action={
-              !data.length && (
-                <Button onClick={() => setEdit('new')}>{t('Добавить пользователя')}</Button>
-              )
+              !search &&
+              filter === 'all' &&
+              !total && <Button onClick={() => setEdit('new')}>{t('Добавить пользователя')}</Button>
             }
           />
         ) : (
@@ -230,10 +250,35 @@ export default function UsersPage() {
           <span>
             {visible.length}
             {t(' из ')}
-            {data.length}
+            {total}
             {t(' пользователей')}
           </span>
-          <span>{t('Онлайн определяется по рукопожатию за 3 минуты')}</span>
+          <div className="row-actions" aria-label={t('Пагинация пользователей')}>
+            <Button
+              disabled={page <= 1 || resource.loading}
+              onClick={() => {
+                setPage(page - 1)
+                setSelected([])
+              }}
+            >
+              {t('Назад')}
+            </Button>
+            <span>
+              {t('Страница ')}
+              {page}
+              {t(' из ')}
+              {Math.max(1, resource.data?.total_pages || 0)}
+            </span>
+            <Button
+              disabled={!resource.data || page >= resource.data.total_pages || resource.loading}
+              onClick={() => {
+                setPage(page + 1)
+                setSelected([])
+              }}
+            >
+              {t('Далее')}
+            </Button>
+          </div>
         </div>
       </section>
       {edit && (
