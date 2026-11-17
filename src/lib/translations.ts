@@ -1,5 +1,7 @@
 // Russian message keys retain the existing UI copy; English is the default locale.
 export const english: Record<string, string> = {
+  'Не удалось переключить устройство. Повторите попытку.':
+    'Could not switch device. Please try again.',
   'Ключ уже использован': 'Key already used',
   'Устройство подключено': 'Device connected',
   'SSH-ключ сервера изменился. Если сервер был переустановлен, подтвердите новый ключ при повторной установке.':

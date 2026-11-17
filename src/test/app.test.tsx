@@ -789,10 +789,10 @@ test.each([
   await screen.findByText('Данный ключ уже использован')
   expect(screen.getByRole('heading', { name: 'Подключение к VPN' })).toBeTruthy()
   expect(screen.getByText('Этот ключ уже активирован на устройстве.')).toBeTruthy()
-  expect(document.querySelector('.subscription-site-main')?.children).toHaveLength(1)
+  expect(document.querySelector('.subscription-site-main')?.children).toHaveLength(2)
   expect(document.querySelector('.subscription-status.is-available')).toBeNull()
   expect(screen.queryByRole('textbox')).toBeNull()
-  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(screen.getByRole('combobox', { name: 'Устройство для подключения' })).toBeTruthy()
   expect(screen.queryByRole('link')).toBeNull()
   expect(screen.queryByText('Подписка активна')).toBeNull()
   expect(document.querySelector('.subscription-qr-modal')).toBeNull()
@@ -966,4 +966,48 @@ test('keeps unused servers accessible when another server key was already used',
   await user.click(screen.getByRole('option', { name: 'Berlin' }))
   await user.click(screen.getByRole('button', { name: 'Показать ключ' }))
   await screen.findByDisplayValue('vpn://berlin')
+})
+
+test('switches device links even when every server on the current device was used', async () => {
+  signedIn = false
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string) => {
+      if (url === '/s/a/devices/laptop/link')
+        return Response.json({ url: 'https://example.test/s/b' })
+      const current = url === '/s/a/manifest' ? 'phone' : 'laptop'
+      return Response.json({
+        name: 'Europe',
+        device_options: [
+          { id: 'phone', name: 'iPhone' },
+          { id: 'laptop', name: 'Laptop' },
+        ],
+        devices: [
+          {
+            id: current,
+            name: current === 'phone' ? 'iPhone' : 'Laptop',
+            servers: [
+              {
+                node_id: 'node-1',
+                last_connected_at: current === 'phone' ? '2026-11-17T10:00:00Z' : null,
+              },
+            ],
+          },
+        ],
+        locations: [{ id: 'node-1', name: 'Berlin', available: true }],
+      })
+    }),
+  )
+  window.history.replaceState({}, '', '/s/a')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByText('Данный ключ уже использован')
+  await user.click(screen.getByRole('combobox', { name: 'Устройство для подключения' }))
+  await user.click(screen.getByRole('option', { name: 'Laptop' }))
+  await screen.findByRole('link', { name: 'AmneziaVPN .vpn' })
+  expect(window.location.pathname).toBe('/s/b')
+  expect(screen.queryByText('Данный ключ уже использован')).toBeNull()
+  expect(screen.getByRole('link', { name: 'AmneziaVPN .vpn' }).getAttribute('href')).toBe(
+    '/s/b/devices/laptop/nodes/node-1.vpn',
+  )
 })

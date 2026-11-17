@@ -9,7 +9,7 @@ import {
   Check,
   ExternalLink,
 } from 'lucide-react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CopyValue } from '../components/ui'
 import { Select } from '../components/Select'
 import { SubscriptionBrand } from '../components/SubscriptionBrand'
@@ -20,6 +20,7 @@ import { fetchProfile, profilePath, SubscriptionQR, type Location } from './Subs
 import './PublicSubscription.css'
 
 type Manifest = {
+  device_options?: { id: string; name: string }[]
   devices?: {
     id: string
     name: string
@@ -175,6 +176,9 @@ function ServerCard({
 }
 
 export default function PublicSubscription() {
+  const navigate = useNavigate()
+  const [switching, setSwitching] = useState(false)
+  const [switchError, setSwitchError] = useState('')
   const { token = '' } = useParams()
   const { language, setLanguage } = useLanguage()
   const [manifest, setManifest] = useState<Manifest | null>(null)
@@ -242,6 +246,37 @@ export default function PublicSubscription() {
   const available = locations.filter((location) => location.available && !location.used)
   const selected =
     locations.find((location) => location.id === selectedId) ?? available[0] ?? locations[0]
+  const deviceOptions = manifest?.device_options ?? manifest?.devices ?? []
+  async function switchDevice(id: string) {
+    if (switching || id === device?.id) return
+    if (!manifest?.device_options) {
+      setDeviceID(id)
+      setQR(null)
+      return
+    }
+    setSwitching(true)
+    setSwitchError('')
+    setQR(null)
+    try {
+      const response = await fetch(base + '/devices/' + encodeURIComponent(id) + '/link', {
+        credentials: 'omit',
+        cache: 'no-store',
+        redirect: 'error',
+      })
+      if (!response.ok) throw new Error()
+      const data: { url: string } = await response.json()
+      const url = new URL(data.url, window.location.origin)
+      if (!/^\/s\/[A-Za-z0-9_-]+$/.test(url.pathname)) throw new Error()
+      setManifest(null)
+      setDeviceID('')
+      setSelectedId('')
+      navigate(url.pathname)
+    } catch {
+      setSwitchError(t('Не удалось переключить устройство. Повторите попытку.'))
+    } finally {
+      setSwitching(false)
+    }
+  }
   const branding = manifest?.branding ?? { name: 'dementia', logo: '' }
   useEffect(() => {
     if (
@@ -293,6 +328,24 @@ export default function PublicSubscription() {
         </div>
       </header>
       <main className="subscription-site-main">
+        {!!deviceOptions.length && (
+          <section className="subscription-install">
+            <div className="subscription-device-picker">
+              <span id="subscription-device-label">{t('Устройство для подключения')}</span>
+              <Select
+                labelledBy="subscription-device-label"
+                value={device?.id ?? ''}
+                disabled={switching}
+                onChange={(id) => void switchDevice(id)}
+                options={deviceOptions.map((item) => ({
+                  value: item.id,
+                  label: item.name === 'Main device' ? t('Основное устройство') : item.name,
+                }))}
+              />
+            </div>
+            {switchError && <p role="alert">{switchError}</p>}
+          </section>
+        )}
         {used ? (
           <section className="subscription-hero" role="status">
             <span className="subscription-status">
@@ -366,20 +419,6 @@ export default function PublicSubscription() {
             {manifest && (
               <>
                 <section className="subscription-install">
-                  {!!manifest?.devices?.length && (
-                    <div className="subscription-device-picker">
-                      <span id="subscription-device-label">{t('Устройство для подключения')}</span>
-                      <Select
-                        labelledBy="subscription-device-label"
-                        value={device?.id ?? ''}
-                        onChange={setDeviceID}
-                        options={manifest.devices.map((item) => ({
-                          value: item.id,
-                          label: item.name === 'Main device' ? t('Основное устройство') : item.name,
-                        }))}
-                      />
-                    </div>
-                  )}
                   {device && (
                     <div
                       className={'subscription-device-status' + (device.online ? ' is-online' : '')}
