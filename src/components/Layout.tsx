@@ -4,6 +4,8 @@ import { DementiaLogo } from './Logo'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Activity,
+  Github,
+  Tag,
   ChevronRight,
   KeyRound,
   LayoutDashboard,
@@ -18,6 +20,7 @@ import {
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/api'
 import { useFeedback } from './ui'
+import { version } from '../../package.json'
 
 function getLinks() {
   return [
@@ -82,26 +85,46 @@ export default function Layout() {
             <ChevronRight size={13} className="muted" />
             <span>{current}</span>
           </div>
-          <button
-            className="logout-button"
-            aria-label={t('Выйти')}
-            title={t('Выйти')}
-            onClick={() =>
-              feedback.confirm(
-                t('Выйти из панели?'),
-                t('Активная сессия на этом устройстве будет завершена.'),
-                async () => {
-                  try {
-                    await auth.signOut()
-                  } catch (e) {
-                    throw new Error(errorMessage(e))
-                  }
-                },
-              )
-            }
-          >
-            <LogOut size={17} />
-          </button>
+          <div className="topbar-actions">
+            <span
+              className="panel-version"
+              title={t('Версия панели')}
+              aria-label={`${t('Версия панели')} ${version}`}
+            >
+              <Tag size={14} aria-hidden="true" />
+              <span>v{version}</span>
+            </span>
+            <a
+              className="logout-button"
+              href="https://github.com/dementia-panel"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('Проект на GitHub')}
+              title={t('Проект на GitHub')}
+            >
+              <Github size={18} aria-hidden="true" />
+            </a>
+            <button
+              className="logout-button"
+              aria-label={t('Выйти')}
+              title={t('Выйти')}
+              onClick={() =>
+                feedback.confirm(
+                  t('Выйти из панели?'),
+                  t('Активная сессия на этом устройстве будет завершена.'),
+                  async () => {
+                    try {
+                      await auth.signOut()
+                    } catch (e) {
+                      throw new Error(errorMessage(e))
+                    }
+                  },
+                )
+              }
+            >
+              <LogOut size={17} />
+            </button>
+          </div>
         </header>
         <main id="main-content" className="page">
           <Outlet />

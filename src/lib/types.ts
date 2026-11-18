@@ -13,6 +13,7 @@ export interface User {
   online_device_count: number
 }
 export interface Node {
+  online_device_count: number
   id: string
   name: string
   ip: string

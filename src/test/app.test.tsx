@@ -180,6 +180,7 @@ beforeEach(() => {
                   ip: '192.0.2.10',
                   vpn_port: 51820,
                   status: nodeStatus,
+                  online_device_count: 7,
                   enabled: true,
                   online: true,
                   revision: 1,
@@ -1104,4 +1105,17 @@ test('paginates users and searches across pages instead of filtering only visibl
   await screen.findByRole('button', { name: 'Открыть пользователя person-00' })
   expect(screen.queryByRole('button', { name: 'Открыть пользователя person-29' })).toBeNull()
   expect((screen.getByRole('button', { name: 'Назад' }) as HTMLButtonElement).disabled).toBe(true)
+})
+
+test('node cards show active devices and topbar project metadata', async () => {
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  const label = await screen.findByText('Подключено устройств')
+  expect(label.nextElementSibling?.textContent).toBe('7')
+  expect(screen.getByRole('link', { name: 'Проект на GitHub' }).getAttribute('href')).toBe(
+    'https://github.com/dementia-panel',
+  )
+  const { version } = await import('../../package.json')
+  expect(screen.getByLabelText(`Версия панели ${version}`).textContent).toBe(`v${version}`)
+  expect(screen.getByRole('button', { name: 'Выйти' })).toBeTruthy()
 })

@@ -133,6 +133,10 @@ export default function NodesPage() {
                 {n.ip}:{n.vpn_port}
               </p>
               <dl className="details">
+                <dt>{t('Подключено устройств')}</dt>
+                <dd>
+                  <span className="node-device-count">{n.online_device_count ?? 0}</span>
+                </dd>
                 <dt>{t('Конфигурация')}</dt>
                 <dd>
                   {n.applied_revision < n.revision
