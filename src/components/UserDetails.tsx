@@ -1,3 +1,4 @@
+import { SubscriptionExpiry, readSubscriptionExpiry } from './SubscriptionExpiry'
 import { useState } from 'react'
 import { bytes, api, date, useResource } from '../lib/api'
 import { t } from '../lib/i18n'
@@ -6,16 +7,6 @@ import { UserDevices } from './UserDevices'
 import { UserConnectionAccess } from './UserConnectionAccess'
 import { Select } from './Select'
 import { ActionForm, Badge, ErrorNotice, Field, Loading, Modal, useFeedback } from './ui'
-
-function dateInput(value: string | null) {
-  if (!value) return ''
-  const parsed = new Date(value)
-  return [
-    parsed.getFullYear(),
-    String(parsed.getMonth() + 1).padStart(2, '0'),
-    String(parsed.getDate()).padStart(2, '0'),
-  ].join('-')
-}
 
 function DetailsForm({
   user,
@@ -33,8 +24,6 @@ function DetailsForm({
   onIssued: (value: { id: string; planId: string; url?: string }) => void
 }) {
   const [selectedPlan, setSelectedPlan] = useState(user.subscription_plan_id ?? '')
-  const [unlimited, setUnlimited] = useState(!access?.expires_at)
-  const [expiry, setExpiry] = useState(dateInput(access?.expires_at ?? null))
   const feedback = useFeedback()
   return (
     <ActionForm
@@ -46,13 +35,9 @@ function DetailsForm({
         if (telegram !== null && (!Number.isSafeInteger(telegram) || telegram <= 0)) {
           throw new Error(t('Telegram ID должен быть положительным целым числом.'))
         }
-        let expiresAt: string | null = null
-        if (selectedPlan && !unlimited) {
-          const [year, month, day] = expiry.split('-').map(Number)
-          const end = new Date(year, month - 1, day, 23, 59, 59, 999)
-          if (Number.isNaN(end.getTime())) throw new Error(t('Выберите дату окончания подписки.'))
-          expiresAt = end.toISOString()
-        }
+        const expiresAt = selectedPlan
+          ? readSubscriptionExpiry(form, access?.expires_at ?? null)
+          : null
         const username = String(form.get('username')).trim()
         const enabled = form.get('enabled') === 'on'
         if (
@@ -145,31 +130,7 @@ function DetailsForm({
               aria-label={t('Подписка включена')}
             />
           </label>
-          <label className="check-field">
-            <input
-              type="checkbox"
-              checked={unlimited}
-              onChange={(event) => setUnlimited(event.target.checked)}
-            />
-            {t('Без ограничения срока')}
-          </label>
-          {selectedPlan && !unlimited && (
-            <Field
-              label={t('Действует до')}
-              hint={
-                t('Включительно до конца выбранного дня.') +
-                ' ' +
-                Intl.DateTimeFormat().resolvedOptions().timeZone
-              }
-            >
-              <input
-                type="date"
-                required
-                value={expiry}
-                onChange={(event) => setExpiry(event.target.value)}
-              />
-            </Field>
-          )}
+          <SubscriptionExpiry expiresAt={access?.expires_at ?? null} disabled={!selectedPlan} />
         </fieldset>
       </section>
       {access && selectedPlan === user.subscription_plan_id && (

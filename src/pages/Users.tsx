@@ -1,5 +1,7 @@
+import { SubscriptionExpiry, readSubscriptionExpiry } from '../components/SubscriptionExpiry'
+import { useSearchParams } from 'react-router-dom'
 import { UserDetails } from '../components/UserDetails'
-import { FormSelect } from '../components/Select'
+import { FormSelect, Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState, useEffect } from 'react'
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
@@ -25,10 +27,44 @@ export default function UsersPage() {
   const plans = useResource<SubscriptionPlan[]>('/subscription-plans')
   const nodes = useResource<Node[]>('/nodes')
   const [issued, setIssued] = useState<{ id: string; planId: string; url?: string } | null>(null)
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('all')
-  const [page, setPage] = useState(1)
-  const params = new URLSearchParams({ page: String(page), per_page: '25', search, status: filter })
+  const [urlParams, setURLParams] = useSearchParams()
+  const search = urlParams.get('search') || ''
+  const filter = ['all', 'online', 'disabled'].includes(urlParams.get('status') || '')
+    ? urlParams.get('status')!
+    : 'all'
+  const sort = ['created_at', 'created_at_asc', 'username', 'last_connected_at'].includes(
+    urlParams.get('sort') || '',
+  )
+    ? urlParams.get('sort')!
+    : 'created_at'
+  const requestedPage = Number(urlParams.get('page') || 1)
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 1000000000
+      ? requestedPage
+      : 1
+  const [newPlan, setNewPlan] = useState('')
+  function updateQuery(values: Record<string, string>) {
+    setURLParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        for (const [key, value] of Object.entries(values))
+          value ? next.set(key, value) : next.delete(key)
+        return next
+      },
+      { replace: true },
+    )
+    setSelected([])
+  }
+  function setPage(value: number) {
+    updateQuery({ page: String(value) })
+  }
+  const params = new URLSearchParams({
+    page: String(page),
+    per_page: '25',
+    search,
+    status: filter,
+    sort,
+  })
   const resource = useResource<UserPage>('/users?' + params, 15000)
   useEffect(() => {
     if (resource.data && page > 1 && page > Math.max(1, resource.data.total_pages))
@@ -42,14 +78,14 @@ export default function UsersPage() {
   const visible = data
   const total = resource.data?.total || 0
   function changeSearch(value: string) {
-    setSearch(value)
-    setPage(1)
-    setSelected([])
+    updateQuery({ search: value, page: '1' })
   }
   function changeFilter(value: string) {
-    setFilter(value)
-    setPage(1)
-    setSelected([])
+    updateQuery({ status: value, page: '1' })
+  }
+  function newUser() {
+    setNewPlan('')
+    setEdit('new')
   }
   function remove(u: User) {
     feedback.confirm(
@@ -87,7 +123,7 @@ export default function UsersPage() {
             <Button aria-label={t('Обновить')} onClick={() => void resource.refresh()}>
               <RefreshCw size={16} />
             </Button>
-            <Button variant="primary" onClick={() => setEdit('new')}>
+            <Button variant="primary" onClick={newUser}>
               <Plus size={16} />
               {t('Добавить пользователя')}
             </Button>
@@ -101,6 +137,19 @@ export default function UsersPage() {
             onChange={changeSearch}
             placeholder={t('Имя или Telegram ID')}
           />
+          <div className="user-sort">
+            <Select
+              value={sort}
+              onChange={(value) => updateQuery({ sort: value, page: '1' })}
+              ariaLabel={t('Сортировка пользователей')}
+              options={[
+                { value: 'created_at', label: t('Сначала новые') },
+                { value: 'created_at_asc', label: t('Сначала старые') },
+                { value: 'username', label: t('По имени') },
+                { value: 'last_connected_at', label: t('По последнему подключению') },
+              ]}
+            />
+          </div>
           <div className="tabs">
             {[
               ['all', t('Все')],
@@ -146,7 +195,7 @@ export default function UsersPage() {
             action={
               !search &&
               filter === 'all' &&
-              !total && <Button onClick={() => setEdit('new')}>{t('Добавить пользователя')}</Button>
+              !total && <Button onClick={newUser}>{t('Добавить пользователя')}</Button>
             }
           />
         ) : (
@@ -306,7 +355,7 @@ export default function UsersPage() {
                   ...(edit !== 'new'
                     ? { enabled: form.get('enabled') === 'on' }
                     : selectedPlan
-                      ? { plan_id: selectedPlan }
+                      ? { plan_id: selectedPlan, expires_at: readSubscriptionExpiry(form) }
                       : {}),
                 },
               )
@@ -330,6 +379,7 @@ export default function UsersPage() {
                 }
               }
               setEdit(null)
+              if (edit === 'new') setPage(1)
               await resource.refresh()
               feedback.notify(
                 edit === 'new' ? t('Пользователь создан') : t('Пользователь обновлён'),
@@ -358,20 +408,37 @@ export default function UsersPage() {
               />
             </Field>
             <Field label={t('Подписка')}>
-              <FormSelect
-                name="plan_id"
-                label={t('Подписка')}
-                defaultValue={edit === 'new' ? '' : edit.subscription_plan_id || ''}
-                disabled={!plans.data}
-                options={[
-                  { value: '', label: t('Без подписки') },
-                  ...(plans.data || []).map((plan) => ({
-                    value: plan.id,
-                    label: plan.name,
-                  })),
-                ]}
-              />
+              {edit === 'new' ? (
+                <>
+                  <input type="hidden" name="plan_id" value={newPlan} />
+                  <Select
+                    value={newPlan}
+                    onChange={setNewPlan}
+                    ariaLabel={t('Подписка')}
+                    disabled={!plans.data}
+                    options={[
+                      { value: '', label: t('Без подписки') },
+                      ...(plans.data || []).map((plan) => ({ value: plan.id, label: plan.name })),
+                    ]}
+                  />
+                </>
+              ) : (
+                <FormSelect
+                  name="plan_id"
+                  label={t('Подписка')}
+                  defaultValue={edit.subscription_plan_id || ''}
+                  disabled={!plans.data}
+                  options={[
+                    { value: '', label: t('Без подписки') },
+                    ...(plans.data || []).map((plan) => ({
+                      value: plan.id,
+                      label: plan.name,
+                    })),
+                  ]}
+                />
+              )}
             </Field>
+            {edit === 'new' && <SubscriptionExpiry disabled={!newPlan} />}
             {plans.error && (
               <ErrorNotice message={plans.error} retry={() => void plans.refresh()} />
             )}

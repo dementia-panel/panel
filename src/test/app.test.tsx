@@ -52,6 +52,16 @@ beforeEach(() => {
                 String(user.telegram_id || '').includes(search)) &&
               (status === 'all' || (status === 'online' ? user.online : !user.enabled)),
           )
+          const sort = query.get('sort') || 'created_at'
+          values.sort((a, b) =>
+            sort === 'username'
+              ? String(a.username).localeCompare(String(b.username))
+              : sort === 'last_connected_at'
+                ? String(b.last_connected_at || '').localeCompare(String(a.last_connected_at || ''))
+                : sort === 'created_at_asc'
+                  ? String(a.created_at).localeCompare(String(b.created_at))
+                  : String(b.created_at).localeCompare(String(a.created_at)),
+          )
           const page = Number(query.get('page') || 1),
             per_page = Number(query.get('per_page') || 25)
           data = {
@@ -599,7 +609,9 @@ test('opens the user card, saves subscription expiration and can pause access', 
   expect(calls.filter((call) => call.method !== 'GET')).toEqual([])
   await user.click(screen.getByRole('checkbox', { name: 'Без ограничения срока' }))
   const expiry = screen.getByLabelText('Действует до')
-  await user.type(expiry, '2027-01-31')
+  fireEvent.change(expiry, { target: { value: '2027-01-31T14:35:20' } })
+  expect((expiry as HTMLInputElement).value).toBe('2027-01-31T14:35:20.000')
+  expect((expiry as HTMLInputElement).checkValidity()).toBe(true)
   await user.click(screen.getByRole('switch', { name: 'Подписка включена' }))
   await user.click(screen.getByRole('button', { name: 'Сохранить изменения' }))
   await screen.findByText('Пользователь обновлён')
@@ -615,7 +627,7 @@ test('opens the user card, saves subscription expiration and can pause access', 
     end.getDate(),
     end.getHours(),
     end.getMinutes(),
-  ]).toEqual([2027, 0, 31, 23, 59])
+  ]).toEqual([2027, 0, 31, 14, 35])
 })
 
 test('selects the nearest chart day on pointer movement and supports keyboard navigation', async () => {
@@ -1118,4 +1130,65 @@ test('node cards show active devices and topbar project metadata', async () => {
   const { version } = await import('../../package.json')
   expect(screen.getByLabelText(`Версия панели ${version}`).textContent).toBe(`v${version}`)
   expect(screen.getByRole('button', { name: 'Выйти' })).toBeTruthy()
+})
+
+test('creates a user with the selected subscription expiration time', async () => {
+  createdPlans = [{ id: 'plan-1', name: 'Europe', node_ids: ['node-1'] }]
+  window.history.replaceState({}, '', '/users')
+  const user = userEvent.setup()
+  render(<App />)
+  await user.click((await screen.findAllByRole('button', { name: 'Добавить пользователя' }))[0])
+  await user.type(screen.getByLabelText('Имя пользователя'), 'timed-user')
+  await user.click(screen.getByRole('combobox', { name: 'Подписка' }))
+  await user.click(await screen.findByRole('option', { name: 'Europe' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Без ограничения срока' }))
+  fireEvent.change(screen.getByLabelText('Действует до'), {
+    target: { value: '2032-04-05T18:42:23' },
+  })
+  await user.click(screen.getByRole('button', { name: 'Создать пользователя' }))
+  await screen.findByText('timed-user')
+  expect(calls.find((c) => c.method === 'POST' && c.path === '/api/admin/users')?.body).toEqual({
+    username: 'timed-user',
+    telegram_id: null,
+    plan_id: 'plan-1',
+    expires_at: new Date('2032-04-05T18:42:23').toISOString(),
+  })
+})
+
+test('sorts users together with filters and keeps the query in the URL', async () => {
+  createdUsers = [
+    { id: 'older', username: 'alice', enabled: false, created_at: '2030-01-01T00:00:00Z' },
+    { id: 'newer', username: 'zoe', enabled: false, created_at: '2030-01-02T00:00:00Z' },
+    { id: 'active', username: 'boris', enabled: true, created_at: '2030-01-03T00:00:00Z' },
+  ]
+  window.history.replaceState({}, '', '/users')
+  const user = userEvent.setup()
+  render(<App />)
+  await screen.findByRole('button', { name: 'Открыть пользователя boris' })
+  expect(
+    screen
+      .getAllByRole('button', { name: /Открыть пользователя / })
+      .map((n) => n.getAttribute('aria-label')),
+  ).toEqual([
+    'Открыть пользователя boris',
+    'Открыть пользователя zoe',
+    'Открыть пользователя alice',
+  ])
+  await user.click(screen.getByRole('button', { name: 'Отключены' }))
+  await user.click(screen.getByRole('combobox', { name: 'Сортировка пользователей' }))
+  await user.click(screen.getByRole('option', { name: 'Сначала старые' }))
+  await screen.findByRole('button', { name: 'Открыть пользователя alice' })
+  expect(
+    screen
+      .getAllByRole('button', { name: /Открыть пользователя / })
+      .map((n) => n.getAttribute('aria-label')),
+  ).toEqual(['Открыть пользователя alice', 'Открыть пользователя zoe'])
+  expect(new URLSearchParams(location.search).get('sort')).toBe('created_at_asc')
+  expect(new URLSearchParams(location.search).get('status')).toBe('disabled')
+  await user.type(screen.getByPlaceholderText('Имя или Telegram ID'), 'alice')
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Открыть пользователя zoe' })).toBeNull(),
+  )
+  expect(new URLSearchParams(location.search).get('search')).toBe('alice')
+  expect(new URLSearchParams(location.search).get('sort')).toBe('created_at_asc')
 })

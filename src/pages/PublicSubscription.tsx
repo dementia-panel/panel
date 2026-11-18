@@ -371,10 +371,12 @@ export default function PublicSubscription() {
                 {manifest?.expires_at
                   ? t('до') +
                     ' ' +
-                    new Date(manifest.expires_at).toLocaleDateString(getLocale(), {
+                    new Date(manifest.expires_at).toLocaleString(getLocale(), {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })
                   : manifest?.name || t('Подключение к VPN')}
               </h1>

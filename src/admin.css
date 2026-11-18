@@ -1292,3 +1292,24 @@
     display: none;
   }
 }
+
+.subscription-expiry-fields {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.subscription-expiry-fields:disabled {
+  opacity: 0.45;
+}
+.app-shell .user-sort {
+  width: 218px;
+  flex-shrink: 0;
+}
+@media (max-width: 720px) {
+  .app-shell .user-sort {
+    flex: 1 1 190px;
+  }
+}
