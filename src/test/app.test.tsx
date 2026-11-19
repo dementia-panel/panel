@@ -7,6 +7,7 @@ import { App } from '../App'
 import { useResource } from '../lib/api'
 
 let nodeStatus = 'ready'
+let nodeAppliedRevision = 4499
 let nodeRemoved = false
 let signedIn = true
 let calls: { path: string; method: string; body: Record<string, unknown> }[]
@@ -18,6 +19,7 @@ let createdSubscriptions: Record<string, unknown>[]
 beforeEach(() => {
   signedIn = true
   nodeStatus = 'ready'
+  nodeAppliedRevision = 4499
   nodeRemoved = false
   calls = []
   createdDevices = []
@@ -193,8 +195,8 @@ beforeEach(() => {
                   online_device_count: 7,
                   enabled: true,
                   online: true,
-                  revision: 1,
-                  applied_revision: 1,
+                  revision: 4499,
+                  applied_revision: nodeAppliedRevision,
                 },
               ],
         )
@@ -907,6 +909,18 @@ test('removes a failed node from the panel without requesting SSH credentials', 
   await screen.findByText('Нода удалена из системы')
   expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ cleanup: false })
   expect(screen.queryByText('Frankfurt')).toBeNull()
+})
+test('shows one synchronization state instead of cumulative node revisions', async () => {
+  window.history.replaceState({}, '', '/nodes')
+  const view = render(<App />)
+  await screen.findByText('Frankfurt')
+  expect(screen.getByText('1/1')).not.toBeNull()
+  expect(screen.queryByText('4499/4499')).toBeNull()
+  view.unmount()
+  nodeAppliedRevision = 4498
+  render(<App />)
+  await screen.findByText('Frankfurt')
+  expect(screen.getByText('0/1')).not.toBeNull()
 })
 test('requires SSH credentials only for remote cleanup and drops them when switching back', async () => {
   const user = userEvent.setup()

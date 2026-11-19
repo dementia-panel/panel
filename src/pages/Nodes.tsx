@@ -139,11 +139,11 @@ export default function NodesPage() {
                 </dd>
                 <dt>{t('Конфигурация')}</dt>
                 <dd>
-                  {n.applied_revision < n.revision
+                  {n.applied_revision !== n.revision
                     ? t('Ожидает синхронизации')
                     : t('Синхронизирована')}{' '}
                   <span className="mono muted">
-                    {n.applied_revision}/{n.revision}
+                    {n.applied_revision === n.revision ? '1/1' : '0/1'}
                   </span>
                 </dd>
                 <dt>{t('Последняя связь')}</dt>
