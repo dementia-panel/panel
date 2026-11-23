@@ -79,7 +79,7 @@ export function ProfileActions({
         const url = URL.createObjectURL(new Blob([action === 'conf' ? conf : key]))
         const link = document.createElement('a')
         link.href = url
-        link.download = `dementia-${nodeId}.${action}`
+        link.download = `${name.replace(/[\\/:*?"<>|\x00-\x1f\x7f]/g, '-').replace(/^[. -]+|[. -]+$/g, '') || 'AmneziaWG'}.${action}`
         document.body.append(link)
         link.click()
         link.remove()

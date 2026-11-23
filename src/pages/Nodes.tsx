@@ -2,9 +2,22 @@ import { Select } from '../components/Select'
 import { t } from '../lib/i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Server, RefreshCw, Pause, Play, Pencil, Radio, RotateCw, Trash2 } from 'lucide-react'
-import { api, date, useResource } from '../lib/api'
-import type { Node } from '../lib/types'
+import {
+  Plus,
+  Server,
+  RefreshCw,
+  Pause,
+  Play,
+  Pencil,
+  Radio,
+  RotateCw,
+  Trash2,
+  Users,
+  Activity,
+  ArrowDownUp,
+} from 'lucide-react'
+import { api, bytes, date, useResource } from '../lib/api'
+import type { Node, NodeMetrics } from '../lib/types'
 import {
   ActionForm,
   Badge,
@@ -22,6 +35,7 @@ import {
 export default function NodesPage() {
   const [params] = useSearchParams()
   const r = useResource<Node[]>('/nodes', 2500)
+  const metrics = useResource<NodeMetrics>('/nodes/metrics', 15000)
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<{
     mode: 'create' | 'edit' | 'endpoint' | 'remove'
@@ -69,6 +83,41 @@ export default function NodesPage() {
           </>
         }
       />
+      <div className="node-metrics" aria-label={t('Показатели нод')}>
+        <div className="stat">
+          <div className="stat-label">
+            {t('Пользователей в сети')}
+            <span>
+              <Users size={20} />
+            </span>
+          </div>
+          <strong>{metrics.data?.online_users ?? '—'}</strong>
+          <small>{t('Сейчас на всех нодах')}</small>
+        </div>
+        <div className="stat">
+          <div className="stat-label">
+            {t('Пиковый онлайн')}
+            <span>
+              <Activity size={20} />
+            </span>
+          </div>
+          <strong>{metrics.data?.peak_online_users ?? '—'}</strong>
+          <small>{t('С начала отслеживания · замер каждые 15 секунд')}</small>
+        </div>
+        <div className="stat">
+          <div className="stat-label">
+            {t('Трафик нод сегодня')}
+            <span>
+              <ArrowDownUp size={20} />
+            </span>
+          </div>
+          <strong>{metrics.data ? bytes(metrics.data.traffic_today_bytes) : '—'}</strong>
+          <small>{t('Входящий + исходящий · UTC')}</small>
+        </div>
+      </div>
+      {metrics.error && (
+        <ErrorNotice message={metrics.error} retry={() => void metrics.refresh()} />
+      )}
       <div className="toolbar standalone">
         <SearchBox value={search} onChange={setSearch} placeholder={t('Название или IP-адрес')} />
         <Button onClick={() => void r.refresh()}>

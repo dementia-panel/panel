@@ -181,6 +181,8 @@ beforeEach(() => {
         nodeRemoved = true
         return respond(undefined, 204)
       }
+      if (path === '/api/admin/nodes/metrics')
+        return respond({ online_users: 3, peak_online_users: 11, traffic_today_bytes: 1024 })
       if (path === '/api/admin/nodes')
         return respond(
           nodeRemoved
@@ -369,6 +371,18 @@ test('requires confirmation before pausing a server', async () => {
   await user.click(screen.getByRole('button', { name: 'Подтвердить' }))
   await screen.findByText('Состояние ноды обновлено')
   expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ enabled: false })
+})
+test('shows live node metrics above the node list', async () => {
+  window.history.replaceState({}, '', '/nodes')
+  render(<App />)
+  await screen.findByText('Frankfurt')
+  const metrics = screen.getByLabelText('Показатели нод')
+  expect(within(metrics).getByText('Пользователей в сети')).toBeTruthy()
+  expect(within(metrics).getByText('3')).toBeTruthy()
+  expect(within(metrics).getByText('Пиковый онлайн')).toBeTruthy()
+  expect(within(metrics).getByText('11')).toBeTruthy()
+  expect(within(metrics).getByText('Трафик нод сегодня')).toBeTruthy()
+  expect(within(metrics).getByText('1 КиБ')).toBeTruthy()
 })
 test('supports administrator setup with a generated password', async () => {
   const originalFetch = globalThis.fetch

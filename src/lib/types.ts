@@ -35,6 +35,11 @@ export interface Node {
   endpoint_host: string | null
   endpoint_port: number | null
 }
+export interface NodeMetrics {
+  online_users: number
+  peak_online_users: number
+  traffic_today_bytes: number
+}
 export interface Subscription {
   id: string
   name: string
