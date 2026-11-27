@@ -49,7 +49,7 @@ export const english: Record<string, string> = {
     'Enter a short device name without control characters.',
   'Выдано устройств': 'Registered devices',
   'Сейчас подключено': 'Connected now',
-  'Подключено устройств': 'Connected devices',
+  'Подключено пользователей': 'Connected users',
   'Версия панели': 'Panel version',
   'Проект на GitHub': 'Project on GitHub',
   'Раздел карточки': 'User details section',

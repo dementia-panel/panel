@@ -194,7 +194,7 @@ beforeEach(() => {
                   ip: '192.0.2.10',
                   vpn_port: 51820,
                   status: nodeStatus,
-                  online_device_count: 7,
+                  online_user_count: 3,
                   enabled: true,
                   online: true,
                   revision: 4499,
@@ -355,7 +355,7 @@ test('registers a server using SSH credentials without a manual fingerprint', as
     name: 'Amsterdam',
     ip: '192.0.2.11',
     ssh_port: 22,
-    vpn_port: 51820,
+    vpn_port: 1234,
     login: 'root',
     password: 'test-only-ssh-password',
   })
@@ -1147,11 +1147,11 @@ test('paginates users and searches across pages instead of filtering only visibl
   expect((screen.getByRole('button', { name: 'Назад' }) as HTMLButtonElement).disabled).toBe(true)
 })
 
-test('node cards show active devices and topbar project metadata', async () => {
+test('node cards show active users and topbar project metadata', async () => {
   window.history.replaceState({}, '', '/nodes')
   render(<App />)
-  const label = await screen.findByText('Подключено устройств')
-  expect(label.nextElementSibling?.textContent).toBe('7')
+  const label = await screen.findByText('Подключено пользователей')
+  expect(label.nextElementSibling?.textContent).toBe('3')
   expect(screen.getByRole('link', { name: 'Проект на GitHub' }).getAttribute('href')).toBe(
     'https://github.com/dementia-panel',
   )

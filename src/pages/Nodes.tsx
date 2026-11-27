@@ -182,9 +182,9 @@ export default function NodesPage() {
                 {n.ip}:{n.vpn_port}
               </p>
               <dl className="details">
-                <dt>{t('Подключено устройств')}</dt>
+                <dt>{t('Подключено пользователей')}</dt>
                 <dd>
-                  <span className="node-device-count">{n.online_device_count ?? 0}</span>
+                  <span className="node-device-count">{n.online_user_count ?? 0}</span>
                 </dd>
                 <dt>{t('Конфигурация')}</dt>
                 <dd>
@@ -486,7 +486,7 @@ export default function NodesPage() {
                       min={1}
                       max={65535}
                       required
-                      defaultValue={modal.node?.vpn_port || 51820}
+                      defaultValue={modal.node?.vpn_port || 1234}
                     />
                   </Field>
                 </div>
