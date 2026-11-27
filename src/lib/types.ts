@@ -32,6 +32,7 @@ export interface Node {
   error: string | null
   retired_at: string | null
   operation_stage?: string
+  agent_version: string
   endpoint_host: string | null
   endpoint_port: number | null
 }

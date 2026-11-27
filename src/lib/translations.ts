@@ -1,4 +1,11 @@
 export const english: Record<string, string> = {
+  'Версия ноды': 'Node version',
+  'Требуется обновление': 'Update required',
+  'Обновить ноду': 'Update node',
+  'Обновление ноды': 'Node update',
+  'Запустить обновление': 'Start update',
+  'Обновление ноды запущено': 'Node update started',
+  'Для старой ноды нужен однократный SSH-доступ. Ключи и настройки VPN сохранятся; затем обновления будут устанавливаться автоматически.': 'A legacy node needs SSH access once. VPN keys and settings will be preserved; subsequent updates will install automatically.',
   Назад: 'Previous',
   Далее: 'Next',
   'Страница ': 'Page ',

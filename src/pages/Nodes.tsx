@@ -38,7 +38,7 @@ export default function NodesPage() {
   const metrics = useResource<NodeMetrics>('/nodes/metrics', 15000)
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<{
-    mode: 'create' | 'edit' | 'endpoint' | 'remove'
+    mode: 'create' | 'edit' | 'endpoint' | 'remove' | 'upgrade'
     node?: Node
   } | null>(params.has('create') ? { mode: 'create' } : null)
   const [cleanup, setCleanup] = useState(false)
@@ -197,6 +197,8 @@ export default function NodesPage() {
                 </dd>
                 <dt>{t('Последняя связь')}</dt>
                 <dd>{date(n.last_seen_at)}</dd>
+                <dt>{t('Версия ноды')}</dt>
+                <dd className="mono">{n.agent_version || t('Требуется обновление')}</dd>
                 <dt>{t('Публичный адрес')}</dt>
                 <dd className="mono">
                   {n.endpoint_host || n.ip}:{n.endpoint_port || n.vpn_port}
@@ -216,7 +218,7 @@ export default function NodesPage() {
                   </>
                 )}
               </dl>
-              {(n.status === 'installing' || n.operation_stage === 'removing') && (
+              {(n.status === 'installing' || n.operation_stage === 'removing' || n.operation_stage === 'upgrading') && (
                 <NodeOperation stage={n.operation_stage} />
               )}
               {n.error && <div className="notice notice-error break-all">{nodeError(n.error)}</div>}
@@ -281,6 +283,11 @@ export default function NodesPage() {
                 <button onClick={() => setModal({ mode: 'endpoint', node: n })}>
                   {t('Изменить адрес')}
                 </button>
+                {n.status === 'ready' && (
+                  <button disabled={n.operation_stage === 'upgrading'} onClick={() => setModal({ mode: 'upgrade', node: n })}>
+                    {t('Обновить ноду')}
+                  </button>
+                )}
                 <button
                   onClick={() =>
                     f.confirm(
@@ -299,7 +306,7 @@ export default function NodesPage() {
                 </button>
                 <button
                   className="danger-text"
-                  disabled={n.status === 'installing' || n.operation_stage === 'removing'}
+                  disabled={n.status === 'installing' || n.operation_stage === 'removing' || n.operation_stage === 'upgrading'}
                   onClick={() => {
                     setCleanup(false)
                     setModal({ mode: 'remove', node: n })
@@ -320,6 +327,8 @@ export default function NodesPage() {
               ? t('Подключение сервера')
               : modal.mode === 'remove'
                 ? t('Удаление ноды')
+                : modal.mode === 'upgrade'
+                  ? t('Обновление ноды')
                 : modal.mode === 'endpoint'
                   ? t('Публичный адрес VPN')
                   : t('Настройки ноды')
@@ -331,6 +340,8 @@ export default function NodesPage() {
             submitLabel={
               modal.mode === 'create'
                 ? t('Установить ноду')
+                : modal.mode === 'upgrade'
+                  ? t('Запустить обновление')
                 : modal.mode === 'remove'
                   ? cleanup
                     ? t('Удалить и очистить сервер')
@@ -361,6 +372,11 @@ export default function NodesPage() {
                   },
                   'DELETE',
                 )
+              else if (modal.mode === 'upgrade')
+                await action(modal.node!, '/actions/upgrade', {
+                  login: value('login'),
+                  password: String(form.get('password')),
+                })
               else if (modal.mode === 'edit')
                 await action(modal.node!, '', { name: value('name') }, 'PATCH')
               else {
@@ -381,7 +397,9 @@ export default function NodesPage() {
               f.notify(
                 modal.mode === 'create'
                   ? t('Установка запущена. Состояние обновится автоматически.')
-                  : modal.mode === 'remove'
+                  : modal.mode === 'upgrade'
+                    ? t('Обновление ноды запущено')
+                    : modal.mode === 'remove'
                     ? cleanup
                       ? t('Очистка VPS запущена.')
                       : t('Нода удалена из системы')
@@ -389,7 +407,17 @@ export default function NodesPage() {
               )
             }}
           >
-            {modal.mode === 'remove' ? (
+            {modal.mode === 'upgrade' ? (
+              <>
+                <p className="muted">{t('Для старой ноды нужен однократный SSH-доступ. Ключи и настройки VPN сохранятся; затем обновления будут устанавливаться автоматически.')}</p>
+                <Field label={t('SSH-пользователь')}>
+                  <input name="login" defaultValue="root" required />
+                </Field>
+                <Field label={t('SSH-пароль')}>
+                  <input name="password" type="password" autoComplete="off" required />
+                </Field>
+              </>
+            ) : modal.mode === 'remove' ? (
               <>
                 <div className="field">
                   <span id="node-removal-mode">{t('Способ удаления')}</span>
@@ -531,14 +559,14 @@ function NodeOperation({ stage }: { stage?: string }) {
     { id: 'verify', name: t('Проверка VPN-интерфейса'), progress: 95 },
   ]
   const current = steps.find((step) => step.id === stage) || steps[0]
-  const label = stage === 'removing' ? t('Очистка VPS запущена.') : current.name
+  const label = stage === 'removing' ? t('Очистка VPS запущена.') : stage === 'upgrading' ? t('Обновление ноды запущено') : current.name
   return (
     <div className="node-operation" role="status">
       <span>{label}</span>
       <progress
         aria-label={label}
         max={100}
-        value={stage === 'removing' ? undefined : current.progress}
+        value={stage === 'removing' || stage === 'upgrading' ? undefined : current.progress}
       />
     </div>
   )
